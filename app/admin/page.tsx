@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
 import nextDynamic from "next/dynamic";
 import Link from "next/link";
-import {
-  Users,
-  CheckCircle,
-  XCircle,
-  TrendingUp,
-  AlertCircle,
-  ChevronRight,
-} from "lucide-react";
+import { AlertCircle, ChevronRight } from "lucide-react";
 import { format, subDays, startOfDay } from "date-fns";
 import {
   getApprovedMembers,
@@ -18,37 +11,84 @@ import {
   getAttendanceForDate,
   getAttendanceInRange,
 } from "@/lib/queries/attendance";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { LiveCheckInFeed, type FeedItem } from "@/components/admin/LiveCheckInFeed";
+import { Button } from "@/components/ui/button";
+import { formatDateISO } from "@/lib/utils";
+import type { FeedItem } from "@/components/admin/LiveCheckInFeed";
 
-const AdminOverviewChartsClient = nextDynamic(
-  () => import("@/components/admin/AdminOverviewChartsClient"),
+const AdminOverviewBody = nextDynamic(
+  () => import("@/components/admin/AdminOverviewBody"),
   {
     ssr: false,
     loading: () => (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
-        <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
+            />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+          <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+        </div>
+        <div className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
       </div>
     ),
   }
 );
-import { Button } from "@/components/ui/button";
-import { formatDateISO } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Admin Overview" };
 export const dynamic = "force-dynamic";
+
+function safeMethod(m: string): FeedItem["method"] {
+  const u = (m ?? "").toLowerCase();
+  if (u === "qr" || u === "manual" || u === "admin") return u;
+  return "admin";
+}
+
+function buildFeed(
+  todayAttendance: Awaited<ReturnType<typeof getAttendanceForDate>>
+): FeedItem[] {
+  return todayAttendance.map((a) => ({
+    id: String(a.id),
+    user_id: String(a.user_id),
+    full_name: String(a.profile?.full_name ?? "Member"),
+    avatar_url: a.profile?.avatar_url ?? null,
+    team: String(a.profile?.team ?? ""),
+    method: safeMethod(String(a.method ?? "admin")),
+    checked_in_at:
+      typeof a.checked_in_at === "string" && a.checked_in_at
+        ? a.checked_in_at
+        : new Date().toISOString(),
+  }));
+}
 
 export default async function AdminOverview() {
   const today = formatDateISO(new Date());
   const sevenAgo = formatDateISO(subDays(new Date(), 6));
 
-  const [members, pending, todayAttendance, weekAttendance] = await Promise.all([
+  let members: Awaited<ReturnType<typeof getApprovedMembers>> = [];
+  let pending: Awaited<ReturnType<typeof getPendingMembers>> = [];
+  let todayAttendance: Awaited<ReturnType<typeof getAttendanceForDate>> = [];
+  let weekAttendance: Awaited<ReturnType<typeof getAttendanceInRange>> = [];
+
+  const settled = await Promise.allSettled([
     getApprovedMembers(),
     getPendingMembers(),
     getAttendanceForDate(today),
     getAttendanceInRange(sevenAgo, today),
   ]);
+
+  if (settled[0].status === "fulfilled") members = settled[0].value;
+  else console.error("[AdminOverview] getApprovedMembers", settled[0].reason);
+  if (settled[1].status === "fulfilled") pending = settled[1].value;
+  else console.error("[AdminOverview] getPendingMembers", settled[1].reason);
+  if (settled[2].status === "fulfilled") todayAttendance = settled[2].value;
+  else console.error("[AdminOverview] getAttendanceForDate", settled[2].reason);
+  if (settled[3].status === "fulfilled") weekAttendance = settled[3].value;
+  else console.error("[AdminOverview] getAttendanceInRange", settled[3].reason);
 
   const memberCount = members.filter((m) => m.role === "member").length;
   const presentToday = todayAttendance.length;
@@ -56,33 +96,25 @@ export default async function AdminOverview() {
   const rate =
     memberCount === 0 ? 0 : Math.round((presentToday / memberCount) * 1000) / 10;
 
-  // Build 7-day trend
   const days: { date: string; rate: number }[] = [];
   const dayPresent: Record<string, number> = {};
   for (const a of weekAttendance) {
-    dayPresent[a.date] = (dayPresent[a.date] ?? 0) + 1;
+    if (a.date) dayPresent[a.date] = (dayPresent[a.date] ?? 0) + 1;
   }
   for (let i = 6; i >= 0; i--) {
     const d = startOfDay(subDays(new Date(), i));
     const iso = formatDateISO(d);
+    const rawRate =
+      memberCount === 0
+        ? 0
+        : Math.round(((dayPresent[iso] ?? 0) / memberCount) * 100);
     days.push({
       date: format(d, "EEE"),
-      rate:
-        memberCount === 0
-          ? 0
-          : Math.round(((dayPresent[iso] ?? 0) / memberCount) * 100),
+      rate: Number.isFinite(rawRate) ? rawRate : 0,
     });
   }
 
-  const feed: FeedItem[] = todayAttendance.map((a) => ({
-    id: a.id,
-    user_id: a.user_id,
-    full_name: a.profile.full_name,
-    avatar_url: a.profile.avatar_url,
-    team: a.profile.team,
-    method: a.method,
-    checked_in_at: a.checked_in_at,
-  }));
+  const feed = buildFeed(todayAttendance);
 
   return (
     <div className="space-y-6">
@@ -92,7 +124,8 @@ export default async function AdminOverview() {
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div>
               <p className="font-display font-semibold text-amber-950">
-                {pending.length} pending registration{pending.length === 1 ? "" : "s"}
+                {pending.length} pending registration
+                {pending.length === 1 ? "" : "s"}
               </p>
               <p className="mt-1 text-sm text-amber-900">
                 Review and approve new members.
@@ -111,49 +144,14 @@ export default async function AdminOverview() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatsCard
-          title="Total Members"
-          value={memberCount}
-          icon={Users}
-          color="blue"
-          delay={0}
-          fadeClass="fade-up-0"
-        />
-        <StatsCard
-          title="Present Today"
-          value={presentToday}
-          icon={CheckCircle}
-          color="green"
-          delay={0.05}
-          fadeClass="fade-up-1"
-        />
-        <StatsCard
-          title="Absent Today"
-          value={absentToday}
-          icon={XCircle}
-          color="red"
-          delay={0.1}
-          fadeClass="fade-up-2"
-        />
-        <StatsCard
-          title="Attendance Rate"
-          value={rate}
-          suffix="%"
-          icon={TrendingUp}
-          color="amber"
-          delay={0.15}
-          fadeClass="fade-up-3"
-        />
-      </div>
-
-      <AdminOverviewChartsClient
+      <AdminOverviewBody
+        memberCount={memberCount}
         presentToday={presentToday}
         absentToday={absentToday}
+        rate={rate}
         days={days}
+        feed={feed}
       />
-
-      <LiveCheckInFeed initial={feed} />
     </div>
   );
 }

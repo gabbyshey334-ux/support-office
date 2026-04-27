@@ -37,30 +37,42 @@ export async function getAllMembers(): Promise<Profile[]> {
 
 export async function getApprovedMembers(): Promise<Profile[]> {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("account_status", "approved")
     .order("full_name", { ascending: true });
+  if (error) {
+    console.error("[getApprovedMembers]", error.message, error.code);
+    return [];
+  }
   return (data as Profile[]) ?? [];
 }
 
 export async function getPendingMembers(): Promise<Profile[]> {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("account_status", "pending")
     .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[getPendingMembers]", error.message, error.code);
+    return [];
+  }
   return (data as Profile[]) ?? [];
 }
 
 export async function countPendingMembers(): Promise<number> {
   const supabase = createClient();
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
     .eq("account_status", "pending");
+  if (error) {
+    console.error("[countPendingMembers]", error.message, error.code);
+    return 0;
+  }
   return count ?? 0;
 }
 

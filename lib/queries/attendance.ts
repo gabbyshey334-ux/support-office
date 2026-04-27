@@ -15,7 +15,18 @@ async function attachProfilesToAttendance(
   rows: AttendanceRecord[] | null
 ): Promise<AttendanceWithProfile[]> {
   if (!rows?.length) return [];
-  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const ids = [...new Set(rows.map((r) => r.user_id).filter(Boolean))] as string[];
+  if (ids.length === 0) {
+    return rows.map((r) => ({
+      ...r,
+      profile: {
+        id: r.user_id,
+        full_name: "Member",
+        avatar_url: null,
+        team: "",
+      },
+    }));
+  }
   const { data: profs, error } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, team")
