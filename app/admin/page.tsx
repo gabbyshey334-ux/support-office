@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Users,
@@ -18,8 +19,20 @@ import {
   getAttendanceInRange,
 } from "@/lib/queries/attendance";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { TodayPie, SevenDayTrend } from "@/components/admin/OverviewCharts";
 import { LiveCheckInFeed, type FeedItem } from "@/components/admin/LiveCheckInFeed";
+
+const AdminOverviewChartsClient = nextDynamic(
+  () => import("@/components/admin/AdminOverviewChartsClient"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+        <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+      </div>
+    ),
+  }
+);
 import { Button } from "@/components/ui/button";
 import { formatDateISO } from "@/lib/utils";
 
@@ -134,10 +147,11 @@ export default async function AdminOverview() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <TodayPie present={presentToday} absent={absentToday} />
-        <SevenDayTrend data={days} />
-      </div>
+      <AdminOverviewChartsClient
+        presentToday={presentToday}
+        absentToday={absentToday}
+        days={days}
+      />
 
       <LiveCheckInFeed initial={feed} />
     </div>

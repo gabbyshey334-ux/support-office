@@ -8,6 +8,44 @@ import type {
   Profile,
 } from "@/types";
 
+type ProfileEmbed = Pick<Profile, "id" | "full_name" | "avatar_url" | "team">;
+
+async function attachProfilesToAttendance(
+  supabase: ReturnType<typeof createClient>,
+  rows: AttendanceRecord[] | null
+): Promise<AttendanceWithProfile[]> {
+  if (!rows?.length) return [];
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const { data: profs, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, team")
+    .in("id", ids);
+  if (error) {
+    console.error("[attachProfilesToAttendance]", error.message);
+  }
+  const pmap = new Map<string, ProfileEmbed>(
+    (profs ?? []).map((p) => [
+      p.id,
+      {
+        id: p.id,
+        full_name: p.full_name,
+        avatar_url: p.avatar_url,
+        team: p.team,
+      },
+    ])
+  );
+  return rows.map((r) => ({
+    ...r,
+    profile:
+      pmap.get(r.user_id) ?? {
+        id: r.user_id,
+        full_name: "Member",
+        avatar_url: null,
+        team: "",
+      },
+  }));
+}
+
 export async function getTodayAttendanceForUser(
   userId: string
 ): Promise<AttendanceRecord | null> {
@@ -76,14 +114,16 @@ export async function getAttendanceForDate(
   date: string
 ): Promise<AttendanceWithProfile[]> {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data: rows, error } = await supabase
     .from("attendance")
-    .select(
-      "*, profile:profiles!attendance_user_id_fkey(id, full_name, avatar_url, team)"
-    )
+    .select("*")
     .eq("date", date)
     .order("checked_in_at", { ascending: false });
-  return (data as unknown as AttendanceWithProfile[]) ?? [];
+  if (error) {
+    console.error("[getAttendanceForDate]", error.message);
+    return [];
+  }
+  return attachProfilesToAttendance(supabase, (rows as AttendanceRecord[]) ?? []);
 }
 
 export async function getAttendanceInRange(
@@ -91,15 +131,17 @@ export async function getAttendanceInRange(
   toDate: string
 ): Promise<AttendanceWithProfile[]> {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data: rows, error } = await supabase
     .from("attendance")
-    .select(
-      "*, profile:profiles!attendance_user_id_fkey(id, full_name, avatar_url, team)"
-    )
+    .select("*")
     .gte("date", fromDate)
     .lte("date", toDate)
     .order("date", { ascending: true });
-  return (data as unknown as AttendanceWithProfile[]) ?? [];
+  if (error) {
+    console.error("[getAttendanceInRange]", error.message);
+    return [];
+  }
+  return attachProfilesToAttendance(supabase, (rows as AttendanceRecord[]) ?? []);
 }
 
 export interface MemberAttendanceSummary {

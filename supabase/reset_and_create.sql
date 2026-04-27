@@ -99,7 +99,27 @@ create table public.notifications (
 );
 
 -- ----------------------------------------------------------------
--- 7. ROW LEVEL SECURITY — PROFILES
+-- 7. RLS helper — must run before profiles policies (avoids recursion on profiles)
+-- ----------------------------------------------------------------
+create or replace function public.support_office_is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  );
+$$;
+
+revoke all on function public.support_office_is_admin() from public;
+grant execute on function public.support_office_is_admin() to authenticated;
+grant execute on function public.support_office_is_admin() to service_role;
+
+-- ----------------------------------------------------------------
+-- 7b. ROW LEVEL SECURITY — PROFILES
 -- ----------------------------------------------------------------
 alter table public.profiles enable row level security;
 
@@ -111,12 +131,7 @@ create policy "read own profile" on public.profiles
 drop policy if exists "admin read all profiles" on public.profiles;
 create policy "admin read all profiles" on public.profiles
   for select to authenticated
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.support_office_is_admin());
 
 drop policy if exists "insert own profile on register" on public.profiles;
 create policy "insert own profile on register" on public.profiles
@@ -165,18 +180,8 @@ drop policy if exists "admin delete attendance" on public.attendance;
 -- Admins: full access (insert/update/delete/select all)
 create policy "admin manage attendance" on public.attendance
   for all to authenticated
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.support_office_is_admin())
+  with check (public.support_office_is_admin());
 
 -- Members: NO insert/update/delete policies — cannot mark attendance themselves
 
@@ -188,18 +193,8 @@ alter table public.notifications enable row level security;
 drop policy if exists "admin manage notifications" on public.notifications;
 create policy "admin manage notifications" on public.notifications
   for all to authenticated
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.support_office_is_admin())
+  with check (public.support_office_is_admin());
 
 -- ----------------------------------------------------------------
 -- 10. INDEXES
