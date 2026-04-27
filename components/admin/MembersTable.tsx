@@ -48,27 +48,23 @@ import {
   updateMemberAction,
 } from "@/lib/actions/admin";
 import {
-  NEOLIFE_STATUS_LABELS,
-  NEOLIFE_STATUS_OPTIONS,
+  MEMBER_STATUS_OPTIONS,
+  memberStatusLabel,
   type AccountStatus,
-  type NeolifeStatus,
+  type MemberStatus,
   type Profile,
 } from "@/types";
 
-function neolifeDot(status: NeolifeStatus) {
-  const map: Record<NeolifeStatus, string> = {
-    distributor: "bg-slate-600",
-    senior_distributor: "bg-slate-600",
-    bronze: "bg-amber-500",
-    silver: "bg-slate-400",
-    gold: "bg-yellow-500",
-    senior_gold: "bg-yellow-600",
-    executive: "bg-violet-600",
-    ruby: "bg-red-500",
-    emerald: "bg-emerald-500",
-    diamond: "bg-blue-600",
+function memberStatusDot(status: string) {
+  const map: Record<MemberStatus, string> = {
+    newbie: "bg-slate-400",
+    probie: "bg-sky-500",
+    pro: "bg-blue-600",
+    distributor: "bg-violet-600",
+    manager: "bg-amber-500",
+    senior_managers: "bg-emerald-600",
   };
-  return map[status];
+  return map[status as MemberStatus] ?? "bg-slate-300";
 }
 
 function accountBadgeClass(s: AccountStatus): string {
@@ -152,11 +148,11 @@ export function MembersTable({ members }: { members: Profile[] }) {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-10 rounded-xl border-slate-300 focus:ring-2 focus:ring-blue-500">
-              <SelectValue placeholder="Neolife Status" />
+              <SelectValue placeholder="Member status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              {NEOLIFE_STATUS_OPTIONS.map((s) => (
+              {MEMBER_STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s.value} value={s.value}>
                   {s.label}
                 </SelectItem>
@@ -215,7 +211,7 @@ export function MembersTable({ members }: { members: Profile[] }) {
                 Upline
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-slate-600 lg:table-cell">
-                Neolife Status
+                Member status
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-slate-600">
                 Account
@@ -287,9 +283,9 @@ export function MembersTable({ members }: { members: Profile[] }) {
                   <TableCell className="hidden py-3.5 lg:table-cell">
                     <span className="flex items-center gap-2 text-sm font-medium text-slate-800">
                       <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${neolifeDot(m.status)}`}
+                        className={`h-2 w-2 shrink-0 rounded-full ${memberStatusDot(m.status)}`}
                       />
-                      {NEOLIFE_STATUS_LABELS[m.status]}
+                      {memberStatusLabel(m.status)}
                     </span>
                   </TableCell>
                   <TableCell className="py-3.5">

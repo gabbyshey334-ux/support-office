@@ -32,7 +32,13 @@ export function LoginForm() {
       password: values.password,
     });
     if (error || !data.user) {
-      toast.error(error?.message ?? "Login failed");
+      const msg = error?.message ?? "Login failed";
+      const hint =
+        msg.toLowerCase().includes("email not confirmed") ||
+        msg.toLowerCase().includes("invalid login")
+          ? " Check your email and password, or ask an admin to confirm your account is approved."
+          : "";
+      toast.error(`${msg}${hint}`);
       setLoading(false);
       return;
     }
@@ -51,7 +57,9 @@ export function LoginForm() {
     }
 
     if (profile.account_status === "pending") {
+      setLoading(false);
       router.push("/pending");
+      router.refresh();
       return;
     }
 

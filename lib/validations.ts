@@ -1,16 +1,12 @@
 import { z } from "zod";
 
-export const neolifeStatusEnum = z.enum([
+export const memberStatusEnum = z.enum([
+  "newbie",
+  "probie",
+  "pro",
   "distributor",
-  "senior_distributor",
-  "bronze",
-  "silver",
-  "gold",
-  "senior_gold",
-  "executive",
-  "ruby",
-  "emerald",
-  "diamond",
+  "manager",
+  "senior_managers",
 ]);
 
 const phoneRegex = /^(\+?234|0)?[789][01]\d{8}$/;
@@ -44,7 +40,7 @@ export const registerStep2Schema = z.object({
   sponsor_name: z.string().min(2, "Sponsor name is required"),
   upline_name: z.string().min(2, "Upline name is required"),
   team: z.string().optional().default("Support Office"),
-  status: neolifeStatusEnum,
+  status: memberStatusEnum,
 });
 
 export const registerStep3Schema = z.object({
@@ -64,7 +60,7 @@ export const fullRegisterSchema = z
     sponsor_name: z.string().min(2),
     upline_name: z.string().min(2),
     team: z.string().optional().default("Support Office"),
-    status: neolifeStatusEnum,
+    status: memberStatusEnum,
     confirm_accuracy: z.literal(true),
   })
   .refine((d) => d.password === d.confirm_password, {
@@ -103,7 +99,7 @@ export const adminAddMemberSchema = z.object({
   sponsor_name: z.string().min(2),
   upline_name: z.string().min(2),
   team: z.string().min(1).default("Support Office"),
-  status: neolifeStatusEnum,
+  status: memberStatusEnum,
 });
 export type AdminAddMemberValues = z.infer<typeof adminAddMemberSchema>;
 

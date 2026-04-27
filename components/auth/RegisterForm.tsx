@@ -24,16 +24,16 @@ import {
   type RegisterFormValues,
 } from "@/lib/validations";
 import {
-  NEOLIFE_STATUS_OPTIONS,
-  NEOLIFE_STATUS_LABELS,
-  type NeolifeStatus,
+  MEMBER_STATUS_OPTIONS,
+  MEMBER_STATUS_LABELS,
+  type MemberStatus,
 } from "@/types";
 import { registerAction } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 
 const steps = [
   { id: 1, label: "Personal Info" },
-  { id: 2, label: "Neolife Details" },
+  { id: 2, label: "Member details" },
   { id: 3, label: "Review & Submit" },
 ];
 
@@ -47,18 +47,14 @@ function normalizePhone(input: string): string {
   return `+234${d}`;
 }
 
-function statusDotClass(s: NeolifeStatus): string {
-  const map: Record<NeolifeStatus, string> = {
-    distributor: "bg-slate-600",
-    senior_distributor: "bg-slate-600",
-    bronze: "bg-amber-500",
-    silver: "bg-slate-400",
-    gold: "bg-yellow-500",
-    senior_gold: "bg-yellow-600",
-    executive: "bg-violet-600",
-    ruby: "bg-red-500",
-    emerald: "bg-emerald-500",
-    diamond: "bg-blue-600",
+function statusDotClass(s: MemberStatus): string {
+  const map: Record<MemberStatus, string> = {
+    newbie: "bg-slate-400",
+    probie: "bg-sky-500",
+    pro: "bg-blue-600",
+    distributor: "bg-violet-600",
+    manager: "bg-amber-500",
+    senior_managers: "bg-emerald-600",
   };
   return map[s];
 }
@@ -74,7 +70,7 @@ export function RegisterForm() {
     mode: "onTouched",
     defaultValues: {
       team: "Support Office",
-      status: "distributor",
+      status: "newbie",
       confirm_accuracy: false as unknown as true,
     },
   });
@@ -329,10 +325,10 @@ export function RegisterForm() {
             <div className="fade-up space-y-5">
               <div>
                 <h2 className="font-display text-[22px] font-semibold text-slate-900">
-                  Your Neolife Details
+                  Member details
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Help us identify your team and upline
+                  Team, upline, and your current status
                 </p>
               </div>
 
@@ -376,7 +372,7 @@ export function RegisterForm() {
 
               <div>
                 <Label className="mb-1 block text-[13px] font-medium text-slate-700">
-                  Neolife Status
+                  Your status
                 </Label>
                 <Popover open={statusOpen} onOpenChange={setStatusOpen}>
                   <PopoverTrigger asChild>
@@ -394,7 +390,7 @@ export function RegisterForm() {
                           )}
                         />
                         {values.status
-                          ? NEOLIFE_STATUS_LABELS[values.status]
+                          ? MEMBER_STATUS_LABELS[values.status]
                           : "Select status"}
                       </span>
                       <span className="text-slate-400">▾</span>
@@ -402,7 +398,7 @@ export function RegisterForm() {
                   </PopoverTrigger>
                   <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1" align="start">
                     <ul className="max-h-64 overflow-auto py-1">
-                      {NEOLIFE_STATUS_OPTIONS.map((o) => (
+                      {MEMBER_STATUS_OPTIONS.map((o) => (
                         <li key={o.value}>
                           <button
                             type="button"
@@ -458,7 +454,7 @@ export function RegisterForm() {
                   <ReviewRow label="Upline" value={values.upline_name} />
                   <ReviewRow label="Team" value={values.team || "Support Office"} />
                   <div className="sm:col-span-2 flex flex-col gap-1 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                    <dt className="text-sm font-medium text-slate-600">Neolife Status</dt>
+                    <dt className="text-sm font-medium text-slate-600">Status</dt>
                     <dd className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       {values.status && (
                         <>
@@ -468,7 +464,7 @@ export function RegisterForm() {
                               statusDotClass(values.status)
                             )}
                           />
-                          {NEOLIFE_STATUS_LABELS[values.status]}
+                          {MEMBER_STATUS_LABELS[values.status]}
                         </>
                       )}
                     </dd>

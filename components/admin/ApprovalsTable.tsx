@@ -17,22 +17,18 @@ import {
 } from "@/components/ui/table";
 import { approveMemberAction, rejectMemberAction } from "@/lib/actions/admin";
 import { getInitials } from "@/lib/utils";
-import { NEOLIFE_STATUS_LABELS, type NeolifeStatus, type Profile } from "@/types";
+import { memberStatusLabel, type MemberStatus, type Profile } from "@/types";
 
-function statusDot(status: NeolifeStatus) {
-  const map: Record<NeolifeStatus, string> = {
-    distributor: "bg-slate-600",
-    senior_distributor: "bg-slate-600",
-    bronze: "bg-amber-500",
-    silver: "bg-slate-400",
-    gold: "bg-yellow-500",
-    senior_gold: "bg-yellow-600",
-    executive: "bg-violet-600",
-    ruby: "bg-red-500",
-    emerald: "bg-emerald-500",
-    diamond: "bg-blue-600",
+function statusDot(status: string) {
+  const map: Record<MemberStatus, string> = {
+    newbie: "bg-slate-400",
+    probie: "bg-sky-500",
+    pro: "bg-blue-600",
+    distributor: "bg-violet-600",
+    manager: "bg-amber-500",
+    senior_managers: "bg-emerald-600",
   };
-  return map[status];
+  return map[status as MemberStatus] ?? "bg-slate-300";
 }
 
 export function ApprovalsTable({ pending }: { pending: Profile[] }) {
@@ -95,7 +91,7 @@ export function ApprovalsTable({ pending }: { pending: Profile[] }) {
               Upline
             </TableHead>
             <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-slate-600 md:table-cell">
-              Neolife Status
+              Status
             </TableHead>
             <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-slate-600 xl:table-cell">
               Registered
@@ -136,7 +132,7 @@ export function ApprovalsTable({ pending }: { pending: Profile[] }) {
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full ${statusDot(m.status)}`}
                   />
-                  {NEOLIFE_STATUS_LABELS[m.status]}
+                  {memberStatusLabel(m.status)}
                 </span>
               </TableCell>
               <TableCell className="hidden py-4 text-sm text-slate-600 xl:table-cell">

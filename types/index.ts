@@ -1,14 +1,13 @@
-export type NeolifeStatus =
+export type MemberStatus =
+  | "newbie"
+  | "probie"
+  | "pro"
   | "distributor"
-  | "senior_distributor"
-  | "bronze"
-  | "silver"
-  | "gold"
-  | "senior_gold"
-  | "executive"
-  | "ruby"
-  | "emerald"
-  | "diamond";
+  | "manager"
+  | "senior_managers";
+
+/** @deprecated Use MemberStatus */
+export type NeolifeStatus = MemberStatus;
 
 export type UserRole = "admin" | "member";
 export type AccountStatus = "pending" | "approved" | "rejected";
@@ -21,7 +20,7 @@ export interface Profile {
   upline_name: string;
   phone_whatsapp: string;
   date_of_birth: string;
-  status: NeolifeStatus;
+  status: MemberStatus;
   team: string;
   role: UserRole;
   account_status: AccountStatus;
@@ -71,21 +70,30 @@ export interface DailyAttendanceSummary {
   rate: number;
 }
 
-export const NEOLIFE_STATUS_LABELS: Record<NeolifeStatus, string> = {
+export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
+  newbie: "Newbie",
+  probie: "Probie",
+  pro: "Pro",
   distributor: "Distributor",
-  senior_distributor: "Senior Distributor",
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-  senior_gold: "Senior Gold",
-  executive: "Executive",
-  ruby: "Ruby",
-  emerald: "Emerald",
-  diamond: "Diamond",
+  manager: "Manager",
+  senior_managers: "Senior Managers",
 };
 
-export const NEOLIFE_STATUS_OPTIONS: { value: NeolifeStatus; label: string }[] =
-  Object.entries(NEOLIFE_STATUS_LABELS).map(([value, label]) => ({
-    value: value as NeolifeStatus,
-    label,
+/** Display label for profile status (handles legacy DB values until migrated). */
+export function memberStatusLabel(status: string): string {
+  if (status in MEMBER_STATUS_LABELS) {
+    return MEMBER_STATUS_LABELS[status as MemberStatus];
+  }
+  return status.replace(/_/g, " ");
+}
+
+export const MEMBER_STATUS_OPTIONS: { value: MemberStatus; label: string }[] =
+  (Object.keys(MEMBER_STATUS_LABELS) as MemberStatus[]).map((value) => ({
+    value,
+    label: MEMBER_STATUS_LABELS[value],
   }));
+
+/** @deprecated Use MEMBER_STATUS_LABELS */
+export const NEOLIFE_STATUS_LABELS = MEMBER_STATUS_LABELS;
+/** @deprecated Use MEMBER_STATUS_OPTIONS */
+export const NEOLIFE_STATUS_OPTIONS = MEMBER_STATUS_OPTIONS;

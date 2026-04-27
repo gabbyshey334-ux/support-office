@@ -6,7 +6,7 @@ import {
   getAttendanceInRange,
   getRangeReport,
 } from "@/lib/queries/attendance";
-import { NEOLIFE_STATUS_LABELS } from "@/types";
+import { memberStatusLabel } from "@/types";
 import { formatDateISO } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
       r.profile.full_name,
       r.profile.sponsor_name,
       r.profile.upline_name,
-      NEOLIFE_STATUS_LABELS[r.profile.status],
+      memberStatusLabel(r.profile.status),
       r.profile.team,
       r.presentDays,
       r.absentDays,

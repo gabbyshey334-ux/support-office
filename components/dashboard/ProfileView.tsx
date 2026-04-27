@@ -21,7 +21,7 @@ import {
   type PasswordChangeValues,
 } from "@/lib/validations";
 import { getInitials, formatDate } from "@/lib/utils";
-import { NEOLIFE_STATUS_LABELS, type Profile } from "@/types";
+import { memberStatusLabel, type Profile } from "@/types";
 
 export function ProfileView({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -135,7 +135,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
             <div className="mt-1 flex flex-wrap gap-2">
               <Badge variant="approved">{profile.account_status}</Badge>
               <Badge variant="blue">
-                {NEOLIFE_STATUS_LABELS[profile.status]}
+                {memberStatusLabel(profile.status)}
               </Badge>
             </div>
             <p className="text-sm text-slate-500 mt-2">
@@ -192,9 +192,9 @@ export function ProfileView({ profile }: { profile: Profile }) {
             <Input value={profile.upline_name} readOnly disabled />
           </Field>
 
-          <Field label="Neolife Status">
+          <Field label="Your status">
             <Input
-              value={NEOLIFE_STATUS_LABELS[profile.status]}
+              value={memberStatusLabel(profile.status)}
               readOnly
               disabled
             />

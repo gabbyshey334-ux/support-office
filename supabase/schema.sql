@@ -17,8 +17,7 @@ create table if not exists profiles (
   phone_whatsapp text not null,
   date_of_birth date not null,
   status text not null check (status in (
-    'distributor','senior_distributor','bronze','silver',
-    'gold','senior_gold','executive','ruby','emerald','diamond'
+    'newbie','probie','pro','distributor','manager','senior_managers'
   )),
   team text not null default 'Support Office',
   role text not null default 'member' check (role in ('admin','member')),

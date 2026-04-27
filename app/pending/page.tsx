@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Clock, MessageCircle } from "lucide-react";
+import { Clock, LayoutDashboard, MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = { title: "Awaiting approval" };
 
@@ -28,12 +28,28 @@ export default function PendingPage() {
           </p>
         </div>
 
-        <Link
-          href="/"
-          className="mt-10 inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
-        >
-          Back to Home
-        </Link>
+        <p className="mt-8 text-sm leading-relaxed text-slate-600">
+          You can sign in anytime with the email and password you just used. If you
+          are still pending approval, you will stay on this status screen. After an
+          admin approves you, the same sign-in takes you straight to your member
+          dashboard.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
+          >
+            <LayoutDashboard className="h-4 w-4" aria-hidden />
+            Sign in (opens dashboard when approved)
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
+          >
+            Homepage
+          </Link>
+        </div>
       </div>
     </main>
   );

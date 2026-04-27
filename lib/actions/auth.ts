@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { fullRegisterSchema, setupSchema } from "@/lib/validations";
 import { revalidatePath } from "next/cache";
+import type { MemberStatus } from "@/types";
 
 export async function registerAction(formData: {
   full_name: string;
@@ -15,37 +16,42 @@ export async function registerAction(formData: {
   sponsor_name: string;
   upline_name: string;
   team?: string;
-  status:
-    | "distributor"
-    | "senior_distributor"
-    | "bronze"
-    | "silver"
-    | "gold"
-    | "senior_gold"
-    | "executive"
-    | "ruby"
-    | "emerald"
-    | "diamond";
+  status: MemberStatus;
   confirm_accuracy: true;
 }) {
   const parsed = fullRegisterSchema.safeParse(formData);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.errors[0]?.message ?? "Invalid input" };
   }
-  const supabase = createClient();
 
-  const { data: signupData, error: signupError } = await supabase.auth.signUp({
+  const admin = createServiceRoleClient();
+
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: parsed.data.email,
     password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: { full_name: parsed.data.full_name },
   });
-  if (signupError || !signupData.user) {
-    return { ok: false as const, error: signupError?.message ?? "Signup failed" };
+
+  if (createErr || !created.user) {
+    const msg = createErr?.message ?? "Could not create account";
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("already") ||
+      lower.includes("registered") ||
+      lower.includes("duplicate")
+    ) {
+      return {
+        ok: false as const,
+        error:
+          "An account with this email already exists. Go to Sign in and use the same email and password.",
+      };
+    }
+    return { ok: false as const, error: msg };
   }
 
-  const userId = signupData.user.id;
+  const userId = created.user.id;
 
-  // Insert via service role to bypass RLS in case session not yet set
-  const admin = createServiceRoleClient();
   const { error: profileError } = await admin.from("profiles").insert({
     id: userId,
     full_name: parsed.data.full_name,
@@ -63,9 +69,6 @@ export async function registerAction(formData: {
     return { ok: false as const, error: profileError.message };
   }
 
-  // Sign user out — they should not be logged in until approved
-  await supabase.auth.signOut();
-
   return { ok: true as const };
 }
 
@@ -81,7 +84,6 @@ export async function setupAction(values: unknown) {
 
   const admin = createServiceRoleClient();
 
-  // Block if any admin already exists
   const { count } = await admin
     .from("profiles")
     .select("*", { count: "exact", head: true })
@@ -91,13 +93,11 @@ export async function setupAction(values: unknown) {
     return { ok: false as const, error: "An admin already exists" };
   }
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser(
-    {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      email_confirm: true,
-    }
-  );
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true,
+  });
   if (createErr || !created.user) {
     return { ok: false as const, error: createErr?.message ?? "Could not create user" };
   }
@@ -109,7 +109,7 @@ export async function setupAction(values: unknown) {
     upline_name: "Founder",
     phone_whatsapp: "+2348000000000",
     date_of_birth: "1990-01-01",
-    status: "diamond",
+    status: "manager",
     team: "Support Office",
     role: "admin",
     account_status: "approved",

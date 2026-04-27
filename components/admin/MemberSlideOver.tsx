@@ -31,7 +31,7 @@ import {
   addMemberAction,
   updateMemberAction,
 } from "@/lib/actions/admin";
-import { NEOLIFE_STATUS_OPTIONS, type Profile } from "@/types";
+import { MEMBER_STATUS_OPTIONS, type Profile } from "@/types";
 
 const inputClass =
   "h-11 rounded-xl border-slate-300 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500";
@@ -65,7 +65,7 @@ export function MemberSlideOver({ open, onOpenChange, member }: Props) {
       sponsor_name: member?.sponsor_name ?? "",
       upline_name: member?.upline_name ?? "",
       team: member?.team ?? "Support Office",
-      status: member?.status ?? "distributor",
+      status: member?.status ?? "newbie",
     },
   });
 
@@ -172,7 +172,7 @@ export function MemberSlideOver({ open, onOpenChange, member }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {NEOLIFE_STATUS_OPTIONS.map((o) => (
+                {MEMBER_STATUS_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
                   </SelectItem>
