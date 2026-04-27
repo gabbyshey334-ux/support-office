@@ -1,186 +1,163 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { differenceInCalendarDays, parseISO, startOfMonth, startOfWeek } from "date-fns";
+import "server-only";
+import { createClient } from "@/lib/supabase/server";
+import { formatDateISO, calculateStreak } from "@/lib/utils";
 import type {
-  Attendance,
-  AttendanceMethod,
-  AttendanceStats,
+  AttendanceRecord,
   AttendanceWithProfile,
+  MemberStats,
   Profile,
 } from "@/types";
-import { todayISO } from "@/lib/utils";
 
-const PROFILE_FIELDS =
-  "id, full_name, username, team, avatar_url, phone_whatsapp, role";
-
-export async function getTodayAttendance(
-  supabase: SupabaseClient,
-  team?: string
-): Promise<AttendanceWithProfile[]> {
-  let query = supabase
-    .from("attendance")
-    .select(`*, profile:profiles!attendance_user_id_fkey(${PROFILE_FIELDS})`)
-    .eq("date", todayISO())
-    .order("checked_in_at", { ascending: true });
-  const { data, error } = await query;
-  if (error) throw error;
-  let rows = (data || []) as AttendanceWithProfile[];
-  if (team) rows = rows.filter((r) => r.profile?.team === team);
-  return rows;
-}
-
-export async function getOwnAttendance(
-  supabase: SupabaseClient,
-  userId: string,
-  limit: number = 60
-): Promise<Attendance[]> {
-  const { data, error } = await supabase
+export async function getTodayAttendanceForUser(
+  userId: string
+): Promise<AttendanceRecord | null> {
+  const supabase = createClient();
+  const today = formatDateISO(new Date());
+  const { data } = await supabase
     .from("attendance")
     .select("*")
     .eq("user_id", userId)
-    .order("date", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data || []) as Attendance[];
-}
-
-export async function getAttendanceInRange(
-  supabase: SupabaseClient,
-  startDate: string,
-  endDate: string
-): Promise<AttendanceWithProfile[]> {
-  const { data, error } = await supabase
-    .from("attendance")
-    .select(`*, profile:profiles!attendance_user_id_fkey(${PROFILE_FIELDS})`)
-    .gte("date", startDate)
-    .lte("date", endDate)
-    .order("date", { ascending: true });
-  if (error) throw error;
-  return (data || []) as AttendanceWithProfile[];
-}
-
-export async function checkInUser(
-  supabase: SupabaseClient,
-  params: { userId: string; method: AttendanceMethod; markedBy?: string }
-): Promise<{ inserted: boolean; row: Attendance | null; existing: Attendance | null }> {
-  const today = todayISO();
-
-  const { data: existing } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("user_id", params.userId)
     .eq("date", today)
     .maybeSingle();
-
-  if (existing) {
-    return { inserted: false, row: null, existing: existing as Attendance };
-  }
-
-  const { data, error } = await supabase
-    .from("attendance")
-    .insert({
-      user_id: params.userId,
-      date: today,
-      method: params.method,
-      marked_by: params.markedBy ?? params.userId,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return { inserted: true, row: data as Attendance, existing: null };
+  return (data as AttendanceRecord) ?? null;
 }
 
-export function computeStats(rows: Attendance[]): AttendanceStats {
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const monthStart = startOfMonth(now);
+export async function getUserAttendanceHistory(
+  userId: string,
+  fromDate?: string,
+  toDate?: string
+): Promise<AttendanceRecord[]> {
+  const supabase = createClient();
+  let q = supabase
+    .from("attendance")
+    .select("*")
+    .eq("user_id", userId)
+    .order("date", { ascending: false });
+  if (fromDate) q = q.gte("date", fromDate);
+  if (toDate) q = q.lte("date", toDate);
+  const { data } = await q;
+  return (data as AttendanceRecord[]) ?? [];
+}
 
-  let thisWeek = 0;
-  let thisMonth = 0;
-  for (const r of rows) {
-    const d = parseISO(r.date);
-    if (d >= weekStart) thisWeek += 1;
-    if (d >= monthStart) thisMonth += 1;
-  }
+export async function getUserStats(
+  userId: string,
+  joinedAt: string
+): Promise<MemberStats> {
+  const records = await getUserAttendanceHistory(userId);
+  const presentDates = records.map((r) => r.date);
 
-  const sortedDates = [...rows]
-    .map((r) => r.date)
-    .sort((a, b) => (a < b ? 1 : -1));
+  const joined = new Date(joinedAt);
+  const today = new Date();
+  const totalDaysSinceJoin =
+    Math.floor((today.getTime() - joined.getTime()) / (1000 * 60 * 60 * 24)) +
+    1;
 
-  let currentStreak = 0;
-  let cursor = new Date();
-  for (const dateStr of sortedDates) {
-    const d = parseISO(dateStr);
-    const diff = differenceInCalendarDays(cursor, d);
-    if (diff === 0 || (currentStreak === 0 && diff === 1)) {
-      currentStreak += 1;
-      cursor = d;
-    } else if (diff === 1) {
-      currentStreak += 1;
-      cursor = d;
-    } else {
-      break;
-    }
-  }
+  const presentDays = presentDates.length;
+  const absentDays = Math.max(0, totalDaysSinceJoin - presentDays);
+  const rate =
+    totalDaysSinceJoin === 0
+      ? 0
+      : Math.round((presentDays / totalDaysSinceJoin) * 1000) / 10;
+
+  const { current, best } = calculateStreak(presentDates);
 
   return {
-    thisWeek,
-    thisMonth,
-    currentStreak,
-    totalDays: rows.length,
+    totalDays: totalDaysSinceJoin,
+    presentDays,
+    absentDays,
+    rate,
+    currentStreak: current,
+    bestStreak: best,
+    lastCheckIn: records[0]?.checked_in_at ?? null,
   };
 }
 
-export interface MemberSummaryRow {
+export async function getAttendanceForDate(
+  date: string
+): Promise<AttendanceWithProfile[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("attendance")
+    .select(
+      "*, profile:profiles!attendance_user_id_fkey(id, full_name, avatar_url, team)"
+    )
+    .eq("date", date)
+    .order("checked_in_at", { ascending: false });
+  return (data as unknown as AttendanceWithProfile[]) ?? [];
+}
+
+export async function getAttendanceInRange(
+  fromDate: string,
+  toDate: string
+): Promise<AttendanceWithProfile[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("attendance")
+    .select(
+      "*, profile:profiles!attendance_user_id_fkey(id, full_name, avatar_url, team)"
+    )
+    .gte("date", fromDate)
+    .lte("date", toDate)
+    .order("date", { ascending: true });
+  return (data as unknown as AttendanceWithProfile[]) ?? [];
+}
+
+export interface MemberAttendanceSummary {
   profile: Profile;
-  daysPresent: number;
-  daysAbsent: number;
-  attendanceRate: number;
-  streak: number;
+  presentDays: number;
+  absentDays: number;
+  rate: number;
+  bestStreak: number;
   lastCheckIn: string | null;
 }
 
-export function buildMemberSummaries(
-  profiles: Profile[],
-  attendance: AttendanceWithProfile[],
-  totalDays: number
-): MemberSummaryRow[] {
-  const byUser = new Map<string, AttendanceWithProfile[]>();
-  for (const row of attendance) {
-    if (!row.user_id) continue;
-    const list = byUser.get(row.user_id) || [];
-    list.push(row);
-    byUser.set(row.user_id, list);
+export async function getRangeReport(
+  fromDate: string,
+  toDate: string
+): Promise<MemberAttendanceSummary[]> {
+  const supabase = createClient();
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("account_status", "approved")
+    .eq("role", "member");
+  const { data: records } = await supabase
+    .from("attendance")
+    .select("*")
+    .gte("date", fromDate)
+    .lte("date", toDate);
+
+  const totalDays =
+    Math.floor(
+      (new Date(toDate).getTime() - new Date(fromDate).getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
+
+  const grouped = new Map<string, AttendanceRecord[]>();
+  for (const r of (records ?? []) as AttendanceRecord[]) {
+    if (!grouped.has(r.user_id)) grouped.set(r.user_id, []);
+    grouped.get(r.user_id)!.push(r);
   }
 
-  return profiles.map((p) => {
-    const rows = (byUser.get(p.id) || []).sort((a, b) =>
-      a.date < b.date ? 1 : -1
-    );
-    const daysPresent = rows.length;
-    const daysAbsent = Math.max(0, totalDays - daysPresent);
-    const attendanceRate =
-      totalDays === 0 ? 0 : Math.round((daysPresent / totalDays) * 100);
-
-    let streak = 0;
-    let cursor = new Date();
-    for (const r of rows) {
-      const d = parseISO(r.date);
-      const diff = differenceInCalendarDays(cursor, d);
-      if (diff === 0 || (streak === 0 && diff === 1) || diff === 1) {
-        streak += 1;
-        cursor = d;
-      } else {
-        break;
-      }
-    }
-
+  return ((profiles ?? []) as Profile[]).map((p) => {
+    const userRecs = grouped.get(p.id) ?? [];
+    const presentDays = userRecs.length;
+    const absentDays = Math.max(0, totalDays - presentDays);
+    const rate =
+      totalDays === 0 ? 0 : Math.round((presentDays / totalDays) * 1000) / 10;
+    const { best } = calculateStreak(userRecs.map((r) => r.date));
+    const lastCheckIn =
+      userRecs
+        .map((r) => r.checked_in_at)
+        .sort()
+        .pop() ?? null;
     return {
       profile: p,
-      daysPresent,
-      daysAbsent,
-      attendanceRate,
-      streak,
-      lastCheckIn: rows[0]?.checked_in_at ?? null,
+      presentDays,
+      absentDays,
+      rate,
+      bestStreak: best,
+      lastCheckIn,
     };
   });
 }

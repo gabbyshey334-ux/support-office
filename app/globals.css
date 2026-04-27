@@ -5,48 +5,223 @@
 @layer base {
   :root {
     --background: 210 40% 98%;
-    --foreground: 222.2 47.4% 11.2%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
-    --primary: 222 79% 48%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222 79% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 48%;
     --radius: 0.75rem;
-  }
-}
 
-@layer base {
-  * {
-    @apply border-border;
+    --so-blue-950: #050d1f;
+    --so-blue-900: #0a1628;
+    --so-blue-800: #0f2040;
+    --so-blue-700: #1a3561;
+    --so-blue-600: #1e4db7;
+    --so-blue-500: #2563eb;
+    --so-blue-400: #3b82f6;
+    --so-blue-300: #93c5fd;
+    --so-blue-100: #dbeafe;
+    --so-blue-50: #eff6ff;
+
+    --so-gold-500: #f59e0b;
+    --so-gold-400: #fbbf24;
+    --so-gold-300: #fcd34d;
+
+    --so-slate-950: #020617;
+    --so-slate-900: #0f172a;
+    --so-slate-800: #1e293b;
+    --so-slate-700: #334155;
+    --so-slate-600: #475569;
+    --so-slate-500: #64748b;
+    --so-slate-400: #94a3b8;
+    --so-slate-300: #cbd5e1;
+    --so-slate-200: #e2e8f0;
+    --so-slate-100: #f1f5f9;
+    --so-slate-50: #f8fafc;
+
+    --so-green-500: #10b981;
+    --so-green-100: #d1fae5;
+    --so-red-500: #ef4444;
+    --so-red-100: #fee2e2;
+    --so-amber-500: #f59e0b;
+    --so-amber-100: #fef3c7;
+
+    --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+    --font-body: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-wordmark: var(--font-allison), cursive;
   }
+
+  * {
+    box-sizing: border-box;
+    @apply border-slate-200;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    @apply bg-slate-50 text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-body);
+    background: var(--so-slate-50);
+    color: var(--so-slate-900);
+    -webkit-font-smoothing: antialiased;
+    @apply font-normal leading-relaxed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    @apply font-semibold tracking-tight text-slate-900;
+  }
+
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight text-slate-900;
   }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
+  .text-balance {
+    text-wrap: balance;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  .text-pretty {
+    text-wrap: pretty;
   }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgb(203 213 225);
-    border-radius: 3px;
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .grid-radial {
+    background-image:
+      radial-gradient(rgba(26, 86, 219, 0.15) 1px, transparent 1px),
+      radial-gradient(rgba(26, 86, 219, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px, 48px 48px;
+    background-position: 0 0, 12px 12px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--so-slate-200);
+    padding: 24px;
+  }
+  .card-sm {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--so-slate-200);
+    padding: 16px;
+  }
+  .badge-present {
+    background: #d1fae5;
+    color: #065f46;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+  .badge-absent {
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+  .badge-pending {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+  .badge-admin {
+    background: #ede9fe;
+    color: #4c1d95;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.4);
+    }
+  }
+  .pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .fade-up {
+    animation: fade-up 0.4s ease both;
+  }
+  .fade-up-0 {
+    animation: fade-up 0.4s ease both;
+  }
+  .fade-up-1 {
+    animation: fade-up 0.4s 0.05s ease both;
+  }
+  .fade-up-2 {
+    animation: fade-up 0.4s 0.1s ease both;
+  }
+  .fade-up-3 {
+    animation: fade-up 0.4s 0.15s ease both;
+  }
+  .fade-up-4 {
+    animation: fade-up 0.4s 0.2s ease both;
+  }
+
+  @keyframes slow-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .slow-spin {
+    animation: slow-spin 8s linear infinite;
+  }
+
+  @keyframes hero-float {
+    0%,
+    100% {
+      transform: rotate(-2deg) translateY(0);
+    }
+    50% {
+      transform: rotate(-2deg) translateY(-12px);
+    }
+  }
+  .hero-float-card {
+    animation: hero-float 5s ease-in-out infinite;
   }
 }

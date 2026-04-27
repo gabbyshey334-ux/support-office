@@ -1,38 +1,25 @@
 import { redirect } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/queries/profiles";
+import { MemberSidebar } from "@/components/dashboard/MemberSidebar";
+import { Topbar } from "@/components/dashboard/Topbar";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const profile = await getCurrentProfile(supabase);
-
-  if (!profile) {
-    // Stale session: auth user exists but no profile row. Sign out and bounce.
-    await supabase.auth.signOut();
-    redirect("/login?error=missing_profile");
-  }
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (profile.role === "admin") redirect("/admin");
+  if (profile.account_status === "pending") redirect("/pending");
+  if (profile.account_status === "rejected") redirect("/login");
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Sidebar profile={profile} />
-      <div className="md:pl-[260px]">
-        <ErrorBoundary>
-          <main className="pb-24 md:pb-0">{children}</main>
-        </ErrorBoundary>
+    <div className="min-h-screen bg-[var(--so-slate-50)]">
+      <MemberSidebar profile={profile} />
+      <div className="lg:pl-60">
+        <Topbar profile={profile} />
+        <main className="p-4 pb-24 md:p-8 md:pb-8 lg:pb-8">{children}</main>
       </div>
     </div>
   );

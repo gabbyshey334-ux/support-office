@@ -10,12 +10,16 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: "1rem",
+      padding: "2rem",
       screens: { "2xl": "1400px" },
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-sora)", "system-ui", "sans-serif"],
+        /** Flyer-style signature for “Support Office” wordmark only */
+        wordmark: ["var(--font-allison)", "cursive"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -23,43 +27,6 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        brand: {
-          DEFAULT: "#1A56DB",
-          50: "#EFF4FE",
-          100: "#DCE7FD",
-          200: "#BACFFB",
-          300: "#8DAEF8",
-          400: "#5B86F2",
-          500: "#3563EB",
-          600: "#1A56DB",
-          700: "#1742B0",
-          800: "#16388E",
-          900: "#152F70",
-        },
-        success: {
-          DEFAULT: "#059669",
-          50: "#ECFDF5",
-          100: "#D1FAE5",
-          500: "#10B981",
-          600: "#059669",
-          700: "#047857",
-        },
-        warning: {
-          DEFAULT: "#D97706",
-          50: "#FFFBEB",
-          100: "#FEF3C7",
-          500: "#F59E0B",
-          600: "#D97706",
-          700: "#B45309",
-        },
-        danger: {
-          DEFAULT: "#DC2626",
-          50: "#FEF2F2",
-          100: "#FEE2E2",
-          500: "#EF4444",
-          600: "#DC2626",
-          700: "#B91C1C",
-        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -88,6 +55,19 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: {
+          DEFAULT: "#1A56DB",
+          50: "#EFF6FF",
+          100: "#DBEAFE",
+          200: "#BFDBFE",
+          300: "#93C5FD",
+          400: "#60A5FA",
+          500: "#3B82F6",
+          600: "#1A56DB",
+          700: "#1E40AF",
+          800: "#1E3A8A",
+          900: "#172554",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -103,15 +83,20 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "fade-in-up": {
-          from: { opacity: "0", transform: "translateY(10px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "hero-float": {
+          "0%, 100%": { transform: "rotate(-2deg) translateY(0)" },
+          "50%": { transform: "rotate(-2deg) translateY(-12px)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in-up": "fade-in-up 0.4s ease-out",
+        float: "float 6s ease-in-out infinite",
+        "hero-float": "hero-float 5s ease-in-out infinite",
       },
     },
   },

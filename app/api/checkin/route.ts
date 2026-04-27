@@ -1,91 +1,103 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile, getProfileById } from "@/lib/queries/profiles";
-import { checkInUser } from "@/lib/queries/attendance";
-import { checkInSchema } from "@/lib/validations";
-import { format, parseISO } from "date-fns";
-import { buildPersonalCheckIn } from "@/lib/whatsapp";
-import { sendWhatsAppMessage } from "@/app/api/whatsapp/_send";
+import { sendCheckInConfirmation } from "@/lib/whatsapp";
+import { formatDateISO } from "@/lib/utils";
 
-export async function POST(request: Request) {
+export const runtime = "nodejs";
+
+export async function POST(req: Request) {
   const supabase = createClient();
-  const me = await getCurrentProfile(supabase);
-  if (!me) {
-    return NextResponse.json({ success: false, message: "Unauthenticated" }, { status: 401 });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const parsed = checkInSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: "Invalid QR code" },
-      { status: 400 }
-    );
+  const body = await req.json().catch(() => null);
+  const scannedId = body?.scanned_user_id?.toString().trim();
+  if (!scannedId) {
+    return NextResponse.json({ error: "Missing scanned_user_id" }, { status: 400 });
   }
 
-  const scannedId = parsed.data.scanned_id;
-
-  // Members may only check in themselves; admins may check in anyone.
-  if (me.role !== "admin" && scannedId !== me.id) {
+  // Only admins may record attendance via QR scan
+  const { data: scanner } = await supabase
+    .from("profiles")
+    .select("role, account_status")
+    .eq("id", user.id)
+    .single();
+  if (!scanner) {
+    return NextResponse.json({ error: "Scanner profile not found" }, { status: 403 });
+  }
+  if (scanner.role !== "admin") {
     return NextResponse.json(
-      { success: false, message: "This QR code does not belong to you." },
+      {
+        error:
+          "Only administrators can record attendance. Members cannot scan or mark check-ins.",
+      },
       { status: 403 }
     );
   }
 
-  const target = await getProfileById(supabase, scannedId);
+  // Verify the scanned user exists and is approved
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone_whatsapp, account_status")
+    .eq("id", scannedId)
+    .single();
   if (!target) {
     return NextResponse.json(
-      { success: false, message: "Unknown member QR code." },
+      { error: "Invalid QR code — user not found" },
       { status: 404 }
     );
   }
-  if (!target.is_active) {
+  if (target.account_status !== "approved") {
     return NextResponse.json(
-      { success: false, message: "This account is inactive." },
+      { error: "User account is not approved" },
       { status: 403 }
     );
   }
 
-  try {
-    const { inserted, row, existing } = await checkInUser(supabase, {
-      userId: target.id,
-      method: me.role === "admin" && scannedId !== me.id ? "admin" : "qr",
-      markedBy: me.id,
-    });
-
-    if (!inserted && existing) {
-      const time = format(parseISO(existing.checked_in_at), "h:mm a");
-      return NextResponse.json({
-        success: true,
-        alreadyCheckedIn: true,
-        message: `Already checked in at ${time}`,
-        time,
-        attendance: existing,
-      });
-    }
-
-    if (row && target.phone_whatsapp) {
-      // Fire-and-forget WhatsApp confirmation.
-      sendWhatsAppMessage(
-        target.phone_whatsapp,
-        buildPersonalCheckIn({
-          fullName: target.full_name,
-          checkedInAt: parseISO(row.checked_in_at),
-        })
-      ).catch((err) => console.error("WhatsApp confirmation failed:", err));
-    }
-
-    const time = row ? format(parseISO(row.checked_in_at), "h:mm a") : "";
-    return NextResponse.json({
-      success: true,
-      alreadyCheckedIn: false,
-      message: `Attendance marked at ${time}`,
-      time,
-      attendance: row,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Check-in failed";
-    return NextResponse.json({ success: false, message }, { status: 500 });
+  const today = formatDateISO(new Date());
+  const { data: existing } = await supabase
+    .from("attendance")
+    .select("id, checked_in_at")
+    .eq("user_id", target.id)
+    .eq("date", today)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json(
+      {
+        error: `${target.full_name} already checked in today`,
+        already: true,
+      },
+      { status: 409 }
+    );
   }
+
+  const checkedAt = new Date();
+
+  const { error: insErr } = await supabase.from("attendance").insert({
+    user_id: target.id,
+    date: today,
+    checked_in_at: checkedAt.toISOString(),
+    method: "qr",
+    marked_by: user.id,
+  });
+  if (insErr) {
+    return NextResponse.json({ error: insErr.message }, { status: 500 });
+  }
+
+  await sendCheckInConfirmation({
+    phone: target.phone_whatsapp,
+    name: target.full_name,
+    checkedInAt: checkedAt,
+  });
+
+  return NextResponse.json({
+    success: true,
+    name: target.full_name,
+    time: checkedAt.toISOString(),
+  });
 }

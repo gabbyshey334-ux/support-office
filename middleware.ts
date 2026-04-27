@@ -1,40 +1,79 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  const { response, supabase, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  const isAuthRoute = pathname.startsWith("/login");
-  const isDashboardRoute = pathname.startsWith("/dashboard");
-
-  if (!user && isDashboardRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("redirectedFrom", pathname);
-    return NextResponse.redirect(url);
+  // Skip Next internal & static asset paths
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/api/whatsapp") || // already auth-checked inside
+    /\.(svg|png|jpg|jpeg|webp|ico|css|js|map|woff2?)$/i.test(pathname)
+  ) {
+    return NextResponse.next();
   }
 
-  if (user && isAuthRoute) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+  // /setup is handled inside the page
+  if (pathname.startsWith("/setup")) {
+    return NextResponse.next();
+  }
 
-    // If the session has no matching profile, the cookie is stale.
-    // Don't redirect into the dashboard or we'll loop — just let /login render.
+  const { response, user, profile } = await updateSession(request);
+
+  const isLoggedIn = !!user;
+  const isApproved = profile?.account_status === "approved";
+  const isAdmin = profile?.role === "admin";
+
+  // /pending is open to anyone
+  if (pathname.startsWith("/pending")) {
+    return response;
+  }
+
+  // /login and /register: redirect logged-in users to their dashboard
+  if (pathname === "/login" || pathname === "/register") {
+    if (isLoggedIn && profile) {
+      if (profile.account_status === "pending") {
+        return NextResponse.redirect(new URL("/pending", request.url));
+      }
+      if (profile.account_status === "approved") {
+        return NextResponse.redirect(
+          new URL(isAdmin ? "/admin" : "/dashboard", request.url)
+        );
+      }
+    }
+    return response;
+  }
+
+  // /dashboard/*
+  if (pathname.startsWith("/dashboard")) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
     if (!profile) {
-      return response;
+      return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (profile.account_status === "pending") {
+      return NextResponse.redirect(new URL("/pending", request.url));
+    }
+    if (!isApproved) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (isAdmin) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+    return response;
+  }
 
-    const url = request.nextUrl.clone();
-    if (profile.role === "member") {
-      url.pathname = "/dashboard/attendance";
-    } else {
-      url.pathname = "/dashboard/today";
+  // /admin/*
+  if (pathname.startsWith("/admin")) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
-    return NextResponse.redirect(url);
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return response;
   }
 
   return response;
@@ -42,6 +81,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - any file with an extension
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.).*)",
   ],
 };

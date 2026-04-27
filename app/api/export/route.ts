@@ -1,196 +1,137 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { format, parseISO, differenceInCalendarDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile, listProfiles } from "@/lib/queries/profiles";
-import { getAttendanceInRange, buildMemberSummaries } from "@/lib/queries/attendance";
-import { dateRangeSchema } from "@/lib/validations";
+import {
+  getAttendanceInRange,
+  getRangeReport,
+} from "@/lib/queries/attendance";
+import { NEOLIFE_STATUS_LABELS } from "@/types";
+import { formatDateISO } from "@/lib/utils";
 
-export async function GET(request: Request) {
+export const runtime = "nodejs";
+
+export async function GET(req: Request) {
   const supabase = createClient();
-  const me = await getCurrentProfile(supabase);
-  if (!me) {
-    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-  }
-  if (me.role !== "admin") {
-    return NextResponse.json({ error: "Admin only" }, { status: 403 });
-  }
-
-  const url = new URL(request.url);
-  const startDate = url.searchParams.get("startDate") ?? "";
-  const endDate = url.searchParams.get("endDate") ?? "";
-  const parsed = dateRangeSchema.safeParse({ startDate, endDate });
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid date range. Use YYYY-MM-DD." },
-      { status: 400 }
-    );
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (!profile || profile.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const totalDays =
-    differenceInCalendarDays(parseISO(endDate), parseISO(startDate)) + 1;
-  if (totalDays < 1) {
-    return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
-  }
+  const url = new URL(req.url);
+  const from = url.searchParams.get("from") ?? formatDateISO(new Date());
+  const to = url.searchParams.get("to") ?? formatDateISO(new Date());
 
-  const [profiles, attendance] = await Promise.all([
-    listProfiles(supabase, { activeOnly: true }),
-    getAttendanceInRange(supabase, startDate, endDate),
+  const [report, raw] = await Promise.all([
+    getRangeReport(from, to),
+    getAttendanceInRange(from, to),
   ]);
-
-  const summaries = buildMemberSummaries(profiles, attendance, totalDays);
 
   const wb = XLSX.utils.book_new();
 
-  const summaryRows: (string | number)[][] = [];
-  summaryRows.push(["Support Office Attendance Report"]);
-  summaryRows.push([
-    `Date range: ${format(parseISO(startDate), "PP")} – ${format(
-      parseISO(endDate),
-      "PP"
-    )}`,
-  ]);
-  summaryRows.push([`Generated: ${format(new Date(), "PP p")}`]);
-  summaryRows.push([]);
-  summaryRows.push([
-    "Total members",
-    "Total days",
-    "Total check-ins",
-    "Avg attendance / day",
-  ]);
-  summaryRows.push([
-    profiles.length,
-    totalDays,
-    attendance.length,
-    Math.round(attendance.length / Math.max(totalDays, 1)),
-  ]);
-  summaryRows.push([]);
-  summaryRows.push([
-    "Member",
-    "Username",
-    "Team",
-    "Role",
-    "Days present",
-    "Days absent",
-    "Attendance %",
-    "Streak",
-    "Last check-in",
-  ]);
-  for (const s of summaries) {
-    summaryRows.push([
-      s.profile.full_name,
-      s.profile.username,
-      s.profile.team,
-      s.profile.role,
-      s.daysPresent,
-      s.daysAbsent,
-      s.attendanceRate,
-      s.streak,
-      s.lastCheckIn ? format(parseISO(s.lastCheckIn), "yyyy-MM-dd HH:mm") : "—",
+  // Sheet 1: Summary
+  const summaryHeader: (string | number)[][] = [
+    ["Support Office — Attendance Report"],
+    [`From: ${from}`, `To: ${to}`],
+    [],
+    [
+      "Members",
+      "Total Present",
+      "Total Absent",
+      "Avg Rate %",
+    ],
+    [
+      report.length,
+      report.reduce((s, r) => s + r.presentDays, 0),
+      report.reduce((s, r) => s + r.absentDays, 0),
+      report.length === 0
+        ? 0
+        : Math.round((report.reduce((s, r) => s + r.rate, 0) / report.length) * 10) /
+          10,
+    ],
+    [],
+    [
+      "Name",
+      "Sponsor",
+      "Upline",
+      "Status",
+      "Team",
+      "Days Present",
+      "Days Absent",
+      "Rate %",
+      "Best Streak",
+      "Last Check-In",
+    ],
+  ];
+
+  for (const r of report) {
+    summaryHeader.push([
+      r.profile.full_name,
+      r.profile.sponsor_name,
+      r.profile.upline_name,
+      NEOLIFE_STATUS_LABELS[r.profile.status],
+      r.profile.team,
+      r.presentDays,
+      r.absentDays,
+      r.rate,
+      r.bestStreak,
+      r.lastCheckIn ? format(parseISO(r.lastCheckIn), "yyyy-MM-dd HH:mm") : "—",
     ]);
   }
 
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryHeader);
 
-  // Styling: title row, header row formatting and conditional cells.
-  const titleCell = summarySheet["A1"];
-  if (titleCell) {
-    titleCell.s = {
-      font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-      fill: { patternType: "solid", fgColor: { rgb: "1A56DB" } },
-      alignment: { horizontal: "left", vertical: "center" },
-    };
-  }
-  const headerRowIdx = 7;
-  const headers = [
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-  ];
-  for (const col of headers) {
-    const cell = summarySheet[`${col}${headerRowIdx + 1}`];
-    if (cell) {
-      cell.s = {
-        font: { bold: true, color: { rgb: "0F172A" } },
-        fill: { patternType: "solid", fgColor: { rgb: "E2E8F0" } },
-        alignment: { horizontal: "left" },
+  // Apply colour to rate column (col index 7) — green/amber/red
+  const headerRowIndex = 6; // 0-indexed row of column headers
+  for (let i = 0; i < report.length; i++) {
+    const r = report[i];
+    const rowIdx = headerRowIndex + 1 + i;
+    const cellAddr = XLSX.utils.encode_cell({ c: 7, r: rowIdx });
+    const fg =
+      r.rate >= 70 ? "FF059669" : r.rate >= 40 ? "FFD97706" : "FFDC2626";
+    if (summarySheet[cellAddr]) {
+      summarySheet[cellAddr].s = {
+        font: { color: { rgb: fg.slice(2) }, bold: true },
       };
     }
   }
-  for (let i = 0; i < summaries.length; i += 1) {
-    const rowIdx = headerRowIdx + 2 + i;
-    const rate = summaries[i].attendanceRate;
-    const fillColor =
-      rate > 70 ? "D1FAE5" : rate >= 40 ? "FEF3C7" : "FEE2E2";
-    const textColor =
-      rate > 70 ? "047857" : rate >= 40 ? "B45309" : "B91C1C";
-    const cell = summarySheet[`G${rowIdx}`];
-    if (cell) {
-      cell.s = {
-        font: { bold: true, color: { rgb: textColor } },
-        fill: { patternType: "solid", fgColor: { rgb: fillColor } },
-        alignment: { horizontal: "center" },
-      };
-    }
-  }
-  summarySheet["!cols"] = [
-    { wch: 28 },
-    { wch: 18 },
-    { wch: 16 },
-    { wch: 10 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 10 },
-    { wch: 22 },
-  ];
+
   XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
 
-  // Raw data sheet.
+  // Sheet 2: Raw Data
   const rawRows: (string | number)[][] = [
-    ["Member", "Username", "Team", "Date", "Time", "Method"],
+    ["Name", "Date", "Day", "Time", "Method", "Marked By"],
   ];
-  for (const r of attendance) {
+  for (const a of raw) {
     rawRows.push([
-      r.profile?.full_name || "",
-      r.profile?.username || "",
-      r.profile?.team || "",
-      r.date,
-      format(parseISO(r.checked_in_at), "HH:mm"),
-      r.method,
+      a.profile.full_name,
+      a.date,
+      format(parseISO(a.date), "EEEE"),
+      format(parseISO(a.checked_in_at), "HH:mm:ss"),
+      a.method,
+      a.marked_by ?? "self",
     ]);
   }
   const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
-  rawSheet["!cols"] = [
-    { wch: 28 },
-    { wch: 18 },
-    { wch: 16 },
-    { wch: 12 },
-    { wch: 8 },
-    { wch: 10 },
-  ];
   XLSX.utils.book_append_sheet(wb, rawSheet, "Raw Data");
 
-  const buffer = XLSX.write(wb, {
-    type: "buffer",
-    bookType: "xlsx",
-    cellStyles: true,
-  }) as Buffer;
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  const body = new Uint8Array(buf);
 
-  const filename = `attendance-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-  return new NextResponse(buffer, {
-    status: 200,
+  return new NextResponse(body, {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename=${filename}`,
-      "Cache-Control": "no-store",
+      "Content-Disposition": `attachment; filename="support-office-attendance-${from}-to-${to}.xlsx"`,
     },
   });
 }

@@ -1,56 +1,91 @@
-export type Role = "admin" | "leader" | "member";
+export type NeolifeStatus =
+  | "distributor"
+  | "senior_distributor"
+  | "bronze"
+  | "silver"
+  | "gold"
+  | "senior_gold"
+  | "executive"
+  | "ruby"
+  | "emerald"
+  | "diamond";
+
+export type UserRole = "admin" | "member";
+export type AccountStatus = "pending" | "approved" | "rejected";
 export type AttendanceMethod = "qr" | "manual" | "admin";
 
 export interface Profile {
   id: string;
   full_name: string;
-  username: string;
-  phone_whatsapp: string | null;
-  role: Role;
+  sponsor_name: string;
+  upline_name: string;
+  phone_whatsapp: string;
+  date_of_birth: string;
+  status: NeolifeStatus;
   team: string;
+  role: UserRole;
+  account_status: AccountStatus;
   avatar_url: string | null;
-  is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
-export interface Attendance {
+export interface AttendanceRecord {
   id: string;
   user_id: string;
   date: string;
   checked_in_at: string;
   method: AttendanceMethod;
   marked_by: string | null;
+  notes: string | null;
 }
 
-export interface AttendanceWithProfile extends Attendance {
-  profile: Pick<Profile, "id" | "full_name" | "username" | "team" | "avatar_url" | "phone_whatsapp" | "role">;
+export interface AttendanceWithProfile extends AttendanceRecord {
+  profile: Pick<Profile, "id" | "full_name" | "avatar_url" | "team">;
 }
 
-export interface AttendanceStats {
-  thisWeek: number;
-  thisMonth: number;
-  currentStreak: number;
+export interface NotificationLog {
+  id: string;
+  type: string;
+  recipient_id: string | null;
+  message: string;
+  sent_at: string;
+  status: string;
+}
+
+export interface MemberStats {
   totalDays: number;
-}
-
-export interface MemberAttendanceSummary {
-  profile: Profile;
-  daysPresent: number;
-  daysAbsent: number;
-  attendanceRate: number;
-  streak: number;
+  presentDays: number;
+  absentDays: number;
+  rate: number;
+  currentStreak: number;
+  bestStreak: number;
   lastCheckIn: string | null;
 }
 
-export interface DailyAttendanceCount {
+export interface DailyAttendanceSummary {
   date: string;
   present: number;
   absent: number;
+  total: number;
+  rate: number;
 }
 
-export interface CheckInResult {
-  success: boolean;
-  message: string;
-  time?: string;
-  alreadyCheckedIn?: boolean;
-}
+export const NEOLIFE_STATUS_LABELS: Record<NeolifeStatus, string> = {
+  distributor: "Distributor",
+  senior_distributor: "Senior Distributor",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+  senior_gold: "Senior Gold",
+  executive: "Executive",
+  ruby: "Ruby",
+  emerald: "Emerald",
+  diamond: "Diamond",
+};
+
+export const NEOLIFE_STATUS_OPTIONS: { value: NeolifeStatus; label: string }[] =
+  Object.entries(NEOLIFE_STATUS_LABELS).map(([value, label]) => ({
+    value: value as NeolifeStatus,
+    label,
+  }));

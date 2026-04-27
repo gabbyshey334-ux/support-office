@@ -30,5 +30,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { response, supabase, user };
+  let profile: {
+    role: "admin" | "member";
+    account_status: "pending" | "approved" | "rejected";
+  } | null = null;
+
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role, account_status")
+      .eq("id", user.id)
+      .single<{ role: "admin" | "member"; account_status: "pending" | "approved" | "rejected" }>();
+    profile = data;
+  }
+
+  return { response, user, profile };
 }

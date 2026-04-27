@@ -1,71 +1,74 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Profile, Role } from "@/types";
+import "server-only";
+import { createClient } from "@/lib/supabase/server";
+import type { Profile } from "@/types";
 
-export async function getCurrentProfile(
-  supabase: SupabaseClient
-): Promise<Profile | null> {
+export async function getCurrentProfile(): Promise<Profile | null> {
+  const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
-  if (error) return null;
-  return data as Profile;
+  return (data as Profile) ?? null;
 }
 
-export async function listProfiles(
-  supabase: SupabaseClient,
-  options: { team?: string; role?: Role; activeOnly?: boolean } = {}
-): Promise<Profile[]> {
-  let query = supabase.from("profiles").select("*").order("full_name");
-  if (options.team) query = query.eq("team", options.team);
-  if (options.role) query = query.eq("role", options.role);
-  if (options.activeOnly) query = query.eq("is_active", true);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []) as Profile[];
-}
-
-export async function getProfileById(
-  supabase: SupabaseClient,
-  id: string
-): Promise<Profile | null> {
-  const { data, error } = await supabase
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const supabase = createClient();
+  const { data } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", id)
     .single();
-  if (error) return null;
-  return data as Profile;
+  return (data as Profile) ?? null;
 }
 
-export async function updateProfile(
-  supabase: SupabaseClient,
-  id: string,
-  patch: Partial<Profile>
-): Promise<Profile> {
-  const { data, error } = await supabase
+export async function getAllMembers(): Promise<Profile[]> {
+  const supabase = createClient();
+  const { data } = await supabase
     .from("profiles")
-    .update(patch)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Profile;
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data as Profile[]) ?? [];
 }
 
-export async function setProfileActive(
-  supabase: SupabaseClient,
-  id: string,
-  isActive: boolean
-): Promise<void> {
-  const { error } = await supabase
+export async function getApprovedMembers(): Promise<Profile[]> {
+  const supabase = createClient();
+  const { data } = await supabase
     .from("profiles")
-    .update({ is_active: isActive })
-    .eq("id", id);
-  if (error) throw error;
+    .select("*")
+    .eq("account_status", "approved")
+    .order("full_name", { ascending: true });
+  return (data as Profile[]) ?? [];
+}
+
+export async function getPendingMembers(): Promise<Profile[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("account_status", "pending")
+    .order("created_at", { ascending: false });
+  return (data as Profile[]) ?? [];
+}
+
+export async function countPendingMembers(): Promise<number> {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("account_status", "pending");
+  return count ?? 0;
+}
+
+export async function adminExists(): Promise<boolean> {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "admin");
+  return (count ?? 0) > 0;
 }

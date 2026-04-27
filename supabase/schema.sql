@@ -1,54 +1,71 @@
--- Support Office - FHG & Neolife Attendance System
--- Run this in the Supabase SQL editor.
+-- ============================================================
+-- Support Office — FHG & Neolife Attendance System
+-- Supabase database schema (incremental / greenfield)
+--
+-- For a FULL wipe + recreate (drops all data), use instead:
+--   supabase/reset_and_create.sql
+--
+-- Run in: Supabase Dashboard > SQL Editor > New query
+-- ============================================================
 
--- PROFILES (extends Supabase auth.users)
+-- ---------------- PROFILES ----------------
 create table if not exists profiles (
   id uuid references auth.users(id) on delete cascade primary key,
   full_name text not null,
-  username text unique not null,
-  phone_whatsapp text,
-  role text not null check (role in ('admin','leader','member')),
+  sponsor_name text not null,
+  upline_name text not null,
+  phone_whatsapp text not null,
+  date_of_birth date not null,
+  status text not null check (status in (
+    'distributor','senior_distributor','bronze','silver',
+    'gold','senior_gold','executive','ruby','emerald','diamond'
+  )),
   team text not null default 'Support Office',
+  role text not null default 'member' check (role in ('admin','member')),
+  account_status text not null default 'pending'
+    check (account_status in ('pending','approved','rejected')),
   avatar_url text,
-  is_active boolean default true,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
--- ATTENDANCE
+-- ---------------- ATTENDANCE ----------------
+-- Only admins may insert/update/delete (RLS). Members read their own rows.
 create table if not exists attendance (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references profiles(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade not null,
   date date not null default current_date,
   checked_in_at timestamptz default now(),
   method text not null check (method in ('qr','manual','admin')),
   marked_by uuid references profiles(id),
+  notes text,
   unique(user_id, date)
 );
 
-create index if not exists attendance_date_idx on attendance(date);
-create index if not exists attendance_user_id_idx on attendance(user_id);
+-- ---------------- NOTIFICATIONS ----------------
+create table if not exists notifications (
+  id uuid default gen_random_uuid() primary key,
+  type text not null,
+  recipient_id uuid references profiles(id),
+  message text not null,
+  sent_at timestamptz default now(),
+  status text default 'sent'
+);
 
--- ROW LEVEL SECURITY
+-- ---------------- ROW LEVEL SECURITY ----------------
 alter table profiles enable row level security;
 alter table attendance enable row level security;
+alter table notifications enable row level security;
 
--- Members can read their own profile.
-drop policy if exists "own profile" on profiles;
-create policy "own profile" on profiles for select using (auth.uid() = id);
+-- Profiles
+drop policy if exists "read own profile" on profiles;
+create policy "read own profile" on profiles
+  for select to authenticated
+  using (auth.uid() = id);
 
--- Admins and leaders can read all profiles.
-drop policy if exists "admin leader read profiles" on profiles;
-create policy "admin leader read profiles" on profiles for select
-  using (
-    exists (
-      select 1 from profiles p
-      where p.id = auth.uid() and p.role in ('admin','leader')
-    )
-  );
-
--- Only admins can insert/update/delete profiles.
-drop policy if exists "admin manage profiles" on profiles;
-create policy "admin manage profiles" on profiles for all
+drop policy if exists "admin read all profiles" on profiles;
+create policy "admin read all profiles" on profiles
+  for select to authenticated
   using (
     exists (
       select 1 from profiles p
@@ -56,29 +73,15 @@ create policy "admin manage profiles" on profiles for all
     )
   );
 
--- Members can insert their own attendance.
-drop policy if exists "self checkin" on attendance;
-create policy "self checkin" on attendance for insert
-  with check (auth.uid() = user_id);
-
--- Members can read their own attendance.
-drop policy if exists "own attendance" on attendance;
-create policy "own attendance" on attendance for select
-  using (auth.uid() = user_id);
-
--- Admins and leaders read all attendance.
-drop policy if exists "admin read all" on attendance;
-create policy "admin read all" on attendance for select
+drop policy if exists "admin manage profiles" on profiles;
+create policy "admin manage profiles" on profiles
+  for all to authenticated
   using (
     exists (
       select 1 from profiles p
-      where p.id = auth.uid() and p.role in ('admin','leader')
+      where p.id = auth.uid() and p.role = 'admin'
     )
-  );
-
--- Admins can insert attendance for anyone.
-drop policy if exists "admin mark" on attendance;
-create policy "admin mark" on attendance for insert
+  )
   with check (
     exists (
       select 1 from profiles p
@@ -86,5 +89,96 @@ create policy "admin mark" on attendance for insert
     )
   );
 
--- Realtime: enable for the attendance table so the Today page updates live.
-alter publication supabase_realtime add table attendance;
+drop policy if exists "insert own profile on register" on profiles;
+create policy "insert own profile on register" on profiles
+  for insert to authenticated
+  with check (auth.uid() = id);
+
+drop policy if exists "update own profile" on profiles;
+create policy "update own profile" on profiles
+  for update to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+-- Attendance: members SELECT own only; admins ALL (no member self-insert)
+drop policy if exists "read own attendance" on attendance;
+create policy "read own attendance" on attendance
+  for select to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "insert own attendance" on attendance;
+
+drop policy if exists "admin manage attendance" on attendance;
+create policy "admin manage attendance" on attendance
+  for all to authenticated
+  using (
+    exists (
+      select 1 from profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+-- Notifications: admins only
+drop policy if exists "admin manage notifications" on notifications;
+create policy "admin manage notifications" on notifications
+  for all to authenticated
+  using (
+    exists (
+      select 1 from profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+-- ---------------- REALTIME ----------------
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'attendance'
+  ) then
+    execute 'alter publication supabase_realtime add table attendance';
+  end if;
+end$$;
+
+-- ---------------- STORAGE ----------------
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Avatar public read" on storage.objects;
+create policy "Avatar public read"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "Avatar authenticated upload" on storage.objects;
+create policy "Avatar authenticated upload"
+  on storage.objects for insert
+  with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
+
+drop policy if exists "Avatar owner update" on storage.objects;
+create policy "Avatar owner update"
+  on storage.objects for update
+  using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Avatar owner delete" on storage.objects;
+create policy "Avatar owner delete"
+  on storage.objects for delete
+  using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ---------------- INDEXES ----------------
+create index if not exists idx_attendance_user_date on attendance(user_id, date);
+create index if not exists idx_attendance_date on attendance(date);
+create index if not exists idx_profiles_role on profiles(role);
+create index if not exists idx_profiles_account_status on profiles(account_status);
