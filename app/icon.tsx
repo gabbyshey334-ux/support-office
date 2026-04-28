@@ -6,11 +6,12 @@ export const runtime = "nodejs";
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
-const ALLISON_LATIN_WOFF2 =
-  "https://fonts.gstatic.com/s/allison/v13/X7nl4b88AP2nkbvZCCGa4Q.woff2";
+/** TrueType only — @vercel/og rejects WOFF2 (`Unsupported OpenType signature wOF2`). */
+const ALLISON_TTF =
+  "https://raw.githubusercontent.com/google/fonts/main/ofl/allison/Allison-Regular.ttf";
 
 export default async function Icon() {
-  const fontData = await fetch(ALLISON_LATIN_WOFF2).then((res) => {
+  const fontData = await fetch(ALLISON_TTF).then((res) => {
     if (!res.ok) throw new Error("Allison font fetch failed");
     return res.arrayBuffer();
   });
