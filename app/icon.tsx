@@ -29,22 +29,21 @@ export default async function Icon() {
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "48px 40px",
+            padding: "36px 28px",
             textAlign: "center",
             color: "#ffffff",
             fontFamily: "Allison",
-            fontSize: 118,
+            fontSize: 96,
+            fontStyle: "normal",
             fontWeight: 400,
-            lineHeight: 0.88,
-            letterSpacing: "-0.02em",
+            lineHeight: 1.05,
+            letterSpacing: 0,
             textShadow: "0 4px 24px rgba(0,0,0,0.35)",
           }}
         >
-          <span>Support</span>
-          <span style={{ marginTop: -6 }}>Office</span>
+          Support Office
         </div>
       </div>
     ),
