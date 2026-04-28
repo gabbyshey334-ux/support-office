@@ -24,7 +24,7 @@ export const registerStep1Schema = z
           (Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
         return age >= 16;
       }, "You must be at least 16 years old"),
-    phone_whatsapp: z
+    phone: z
       .string()
       .regex(phoneRegex, "Enter a valid Nigerian phone number"),
     email: z.string().email("Enter a valid email address"),
@@ -53,7 +53,7 @@ export const fullRegisterSchema = z
   .object({
     full_name: z.string().min(2),
     date_of_birth: z.string().min(1),
-    phone_whatsapp: z.string().regex(phoneRegex),
+    phone: z.string().regex(phoneRegex),
     email: z.string().email(),
     password: z.string().min(8),
     confirm_password: z.string().min(8),
@@ -95,7 +95,7 @@ export const adminAddMemberSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   date_of_birth: z.string().min(1),
-  phone_whatsapp: z.string().regex(phoneRegex, "Enter a valid Nigerian phone"),
+  phone: z.string().regex(phoneRegex, "Enter a valid Nigerian phone"),
   sponsor_name: z.string().min(2),
   upline_name: z.string().min(2),
   team: z.string().min(1).default("Support Office"),
@@ -104,7 +104,7 @@ export const adminAddMemberSchema = z.object({
 export type AdminAddMemberValues = z.infer<typeof adminAddMemberSchema>;
 
 export const profileUpdateSchema = z.object({
-  phone_whatsapp: z.string().regex(phoneRegex, "Enter a valid Nigerian phone"),
+  phone: z.string().regex(phoneRegex, "Enter a valid Nigerian phone"),
   team: z.string().min(1, "Team is required"),
   avatar_url: z.string().optional().nullable(),
 });

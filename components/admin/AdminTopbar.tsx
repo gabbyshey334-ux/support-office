@@ -1,12 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Loader2, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { sendDailySummaryAction } from "@/lib/actions/admin";
-import { toast } from "sonner";
 import type { Profile } from "@/types";
 
 const titles: { prefix: string; exact?: boolean; title: string; sub: string }[] = [
@@ -19,7 +16,6 @@ const titles: { prefix: string; exact?: boolean; title: string; sub: string }[] 
 
 export function AdminTopbar({ profile }: { profile: Profile }) {
   const pathname = usePathname();
-  const [sending, setSending] = useState(false);
 
   const meta =
     titles.find((t) =>
@@ -29,14 +25,6 @@ export function AdminTopbar({ profile }: { profile: Profile }) {
       title: "Admin",
       sub: "Support Office",
     };
-
-  const onSendSummary = async () => {
-    setSending(true);
-    const res = await sendDailySummaryAction();
-    setSending(false);
-    if (!res.ok) toast.error(res.error);
-    else toast.success(`Summary sent — ${res.presentCount} present`);
-  };
 
   return (
     <header className="sticky top-0 z-20 h-16 border-b border-slate-200 bg-white">
@@ -48,18 +36,6 @@ export function AdminTopbar({ profile }: { profile: Profile }) {
           <p className="truncate text-[13px] text-slate-600">{meta.sub}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={onSendSummary}
-            disabled={sending}
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-2.5 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-green-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 sm:px-3 sm:text-xs"
-          >
-            {sending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : null}
-            <span className="hidden sm:inline">Send WhatsApp Summary</span>
-            <span className="sm:hidden">WhatsApp</span>
-          </button>
           <button
             type="button"
             className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 active:scale-[0.98]"

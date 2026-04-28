@@ -24,7 +24,7 @@ export default function LoginPage() {
               {[
                 "See your attendance after admins record it",
                 "Build your consistency streak",
-                "Get WhatsApp confirmations",
+                "View history and streaks on your dashboard",
               ].map((line) => (
                 <li key={line} className="flex items-center gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-blue-400">

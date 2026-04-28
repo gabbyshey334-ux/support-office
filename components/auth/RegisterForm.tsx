@@ -71,6 +71,7 @@ export function RegisterForm() {
     defaultValues: {
       team: "Support Office",
       status: "newbie",
+      phone: "",
       confirm_accuracy: false as unknown as true,
     },
   });
@@ -91,7 +92,7 @@ export function RegisterForm() {
       [
         "full_name",
         "date_of_birth",
-        "phone_whatsapp",
+        "phone",
         "email",
         "password",
         "confirm_password",
@@ -114,8 +115,8 @@ export function RegisterForm() {
   const next = async () => {
     let valid = false;
     if (step === 1) {
-      const normalized = normalizePhone(values.phone_whatsapp ?? "");
-      setValue("phone_whatsapp", normalized, { shouldValidate: true });
+      const normalized = normalizePhone(values.phone ?? "");
+      setValue("phone", normalized, { shouldValidate: true });
       valid = await trigger([...step1Keys]);
       if (valid) {
         const r = registerStep1Schema.safeParse(values);
@@ -138,7 +139,7 @@ export function RegisterForm() {
   const onSubmit = async (data: RegisterFormValues) => {
     const normalized = {
       ...data,
-      phone_whatsapp: normalizePhone(data.phone_whatsapp ?? ""),
+      phone: normalizePhone(data.phone ?? ""),
     };
     const r3 = registerStep3Schema.safeParse(normalized);
     if (!r3.success) {
@@ -261,8 +262,8 @@ export function RegisterForm() {
                   }
                 />
                 <Field
-                  label="Phone Number (WhatsApp)"
-                  error={errors.phone_whatsapp?.message}
+                  label="Phone number"
+                  error={errors.phone?.message}
                   input={
                     <div className="flex overflow-hidden rounded-xl border border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
                       <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
@@ -272,7 +273,7 @@ export function RegisterForm() {
                         type="tel"
                         placeholder="812 345 6789"
                         className="h-11 flex-1 rounded-none border-0 text-[15px] shadow-none focus-visible:ring-0"
-                        {...register("phone_whatsapp")}
+                        {...register("phone")}
                       />
                     </div>
                   }
@@ -448,7 +449,7 @@ export function RegisterForm() {
                 <dl className="grid gap-3 sm:grid-cols-2">
                   <ReviewRow label="Full Name" value={values.full_name} />
                   <ReviewRow label="Email" value={values.email} />
-                  <ReviewRow label="Phone" value={values.phone_whatsapp} />
+                  <ReviewRow label="Phone" value={values.phone} />
                   <ReviewRow label="Date of Birth" value={values.date_of_birth} />
                   <ReviewRow label="Sponsor" value={values.sponsor_name} />
                   <ReviewRow label="Upline" value={values.upline_name} />

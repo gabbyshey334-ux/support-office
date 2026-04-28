@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Clock, LayoutDashboard, MessageCircle } from "lucide-react";
+import { Clock, LayoutDashboard, Mail } from "lucide-react";
 
 export const metadata: Metadata = { title: "Awaiting approval" };
 
@@ -17,14 +17,14 @@ export default function PendingPage() {
         </h1>
         <p className="mt-4 text-base leading-[1.7] text-slate-600">
           Your application has been received. The admin will review your details
-          and approve your account shortly. You will receive a WhatsApp message
-          once you&apos;re approved.
+          and approve your account shortly. Once approved, you can sign in and
+          access your dashboard immediately.
         </p>
 
-        <div className="mt-8 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-left">
-          <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-          <p className="text-sm font-medium text-green-900">
-            Check your WhatsApp for updates
+        <div className="mt-8 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-left">
+          <Mail className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+          <p className="text-sm font-medium text-blue-900">
+            Check your email inbox for updates on your registration status.
           </p>
         </div>
 

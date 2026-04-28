@@ -4,17 +4,17 @@ const steps = [
   {
     n: "01",
     title: "Register",
-    body: "Fill the form with your Neolife details and submit.",
+    body: "Fill the form with your personal and Neolife details and submit your registration.",
   },
   {
     n: "02",
     title: "Get Approved",
-    body: "Admin reviews your registration and activates your account.",
+    body: "The admin reviews your registration and activates your account. You'll be notified by email.",
   },
   {
     n: "03",
-    title: "Attendance each day",
-    body: "Bring your QR; an admin marks you present. You track streaks and history in the app.",
+    title: "Check In Daily",
+    body: "Log in, scan your QR code or tap Mark Present. Your attendance is recorded instantly.",
   },
 ];
 

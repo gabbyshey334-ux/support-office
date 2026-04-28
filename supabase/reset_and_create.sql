@@ -54,7 +54,7 @@ create table public.profiles (
   full_name text not null,
   sponsor_name text not null,
   upline_name text not null,
-  phone_whatsapp text not null,
+  phone text not null,
   date_of_birth date not null,
   status text not null
     check (status in (

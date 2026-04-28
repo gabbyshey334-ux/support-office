@@ -8,7 +8,6 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.startsWith("/api/whatsapp") || // already auth-checked inside
     /\.(svg|png|jpg|jpeg|webp|ico|css|js|map|woff2?)$/i.test(pathname)
   ) {
     return NextResponse.next();

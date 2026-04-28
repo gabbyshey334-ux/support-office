@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sendCheckInConfirmation } from "@/lib/whatsapp";
 import { formatDateISO } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
   // Verify the scanned user exists and is approved
   const { data: target } = await supabase
     .from("profiles")
-    .select("id, full_name, phone_whatsapp, account_status")
+    .select("id, full_name, account_status")
     .eq("id", scannedId)
     .single();
   if (!target) {
@@ -88,12 +87,6 @@ export async function POST(req: Request) {
   if (insErr) {
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
-
-  await sendCheckInConfirmation({
-    phone: target.phone_whatsapp,
-    name: target.full_name,
-    checkedInAt: checkedAt,
-  });
 
   return NextResponse.json({
     success: true,

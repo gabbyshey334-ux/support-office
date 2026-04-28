@@ -91,21 +91,21 @@ export function AboutUs() {
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
+        style={{
             backgroundImage:
               "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
             backgroundSize: "20px 20px",
-          }}
-          aria-hidden
-        />
-        <div
+        }}
+        aria-hidden
+      />
+      <div
           className="pointer-events-none absolute -right-20 top-1/2 h-[min(90vw,520px)] w-[min(90vw,520px)] -translate-y-1/2 rounded-full opacity-40 blur-3xl"
-          style={{
-            background:
+        style={{
+          background:
               "radial-gradient(circle at 30% 30%, rgba(37,99,235,0.45), transparent 65%)",
-          }}
-          aria-hidden
-        />
+        }}
+        aria-hidden
+      />
 
         <div className="relative mx-auto max-w-5xl text-center fade-up">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-200">
@@ -163,7 +163,7 @@ export function AboutUs() {
               <span className="font-sans">Join</span>{" "}
               <SupportOfficeWordmark className="inline text-[1.15em] text-[#1E4DB7]" />
             </Link>
-          </div>
+            </div>
         </div>
       </div>
 
@@ -192,8 +192,8 @@ export function AboutUs() {
               Leadership
             </span>
             <h3 className="font-display text-3xl font-bold text-slate-900 md:text-4xl">
-              The people behind the mission
-            </h3>
+            The people behind the mission
+          </h3>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">
               These are the people who set the tone for FHG and this{" "}
               <SupportOfficeWordmark className="inline text-[1.08em] text-slate-800" />

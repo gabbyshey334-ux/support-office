@@ -1,6 +1,6 @@
 "use client";
 
-import { QrCode, Flame, MessageCircle } from "lucide-react";
+import { QrCode, Flame, Shield } from "lucide-react";
 
 const features = [
   {
@@ -18,11 +18,11 @@ const features = [
     iconColor: "text-amber-600",
   },
   {
-    icon: MessageCircle,
-    title: "WhatsApp Confirmations",
-    body: "Get an instant WhatsApp message every time your attendance is marked. Never miss a confirmation.",
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
+    icon: Shield,
+    title: "Secure & Private",
+    body: "Your attendance data is protected with enterprise-grade security. Only you and your admin can see your records.",
+    iconBg: "bg-green-50",
+    iconColor: "text-green-600",
   },
 ];
 

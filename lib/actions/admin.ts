@@ -6,13 +6,7 @@ import {
   adminAddMemberSchema,
   type AdminAddMemberValues,
 } from "@/lib/validations";
-import {
-  sendApprovalMessage,
-  sendDailySummary,
-  sendRejectionMessage,
-} from "@/lib/whatsapp";
 import { formatDateISO } from "@/lib/utils";
-import type { AttendanceWithProfile } from "@/types";
 
 async function ensureAdmin() {
   const supabase = createClient();
@@ -39,17 +33,12 @@ export async function approveMemberAction(memberId: string) {
     .from("profiles")
     .update({ account_status: "approved", updated_at: new Date().toISOString() })
     .eq("id", memberId)
-    .select("full_name, phone_whatsapp")
+    .select("full_name")
     .single();
 
   if (error || !profile) {
     return { ok: false as const, error: error?.message ?? "Failed" };
   }
-
-  await sendApprovalMessage({
-    phone: profile.phone_whatsapp,
-    name: profile.full_name,
-  });
 
   await admin.from("notifications").insert({
     type: "approval",
@@ -71,17 +60,12 @@ export async function rejectMemberAction(memberId: string) {
     .from("profiles")
     .update({ account_status: "rejected", updated_at: new Date().toISOString() })
     .eq("id", memberId)
-    .select("full_name, phone_whatsapp")
+    .select("full_name")
     .single();
 
   if (error || !profile) {
     return { ok: false as const, error: error?.message ?? "Failed" };
   }
-
-  await sendRejectionMessage({
-    phone: profile.phone_whatsapp,
-    name: profile.full_name,
-  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/approvals");
@@ -125,7 +109,7 @@ export async function addMemberAction(values: AdminAddMemberValues) {
     full_name: parsed.data.full_name,
     sponsor_name: parsed.data.sponsor_name,
     upline_name: parsed.data.upline_name,
-    phone_whatsapp: parsed.data.phone_whatsapp,
+    phone: parsed.data.phone,
     date_of_birth: parsed.data.date_of_birth,
     status: parsed.data.status,
     team: parsed.data.team,
@@ -145,7 +129,7 @@ export async function updateMemberAction(
   memberId: string,
   values: Partial<{
     full_name: string;
-    phone_whatsapp: string;
+    phone: string;
     sponsor_name: string;
     upline_name: string;
     team: string;
@@ -184,56 +168,4 @@ export async function adminMarkPresentAction(memberId: string) {
   revalidatePath("/admin/attendance");
   revalidatePath("/admin");
   return { ok: true as const };
-}
-
-export async function sendDailySummaryAction() {
-  const adminId = await ensureAdmin();
-  const admin = createServiceRoleClient();
-  const today = formatDateISO(new Date());
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("phone_whatsapp, full_name")
-    .eq("id", adminId)
-    .single();
-
-  if (!profile) return { ok: false as const, error: "Admin profile not found" };
-
-  const { data: members } = await admin
-    .from("profiles")
-    .select("id, full_name")
-    .eq("role", "member")
-    .eq("account_status", "approved");
-
-  const { data: present } = await admin
-    .from("attendance")
-    .select("user_id")
-    .eq("date", today);
-
-  const presentIds = new Set((present ?? []).map((p) => p.user_id));
-  const presentNames: string[] = [];
-  const absentNames: string[] = [];
-  for (const m of members ?? []) {
-    if (presentIds.has(m.id)) presentNames.push(m.full_name);
-    else absentNames.push(m.full_name);
-  }
-
-  await sendDailySummary({
-    phone: profile.phone_whatsapp,
-    date: new Date(),
-    presentNames,
-    absentNames,
-  });
-
-  await admin.from("notifications").insert({
-    type: "daily_summary",
-    recipient_id: adminId,
-    message: `Daily summary for ${today}`,
-  });
-
-  return {
-    ok: true as const,
-    presentCount: presentNames.length,
-    absentCount: absentNames.length,
-  };
 }

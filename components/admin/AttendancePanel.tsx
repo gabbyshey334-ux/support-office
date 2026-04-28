@@ -6,19 +6,19 @@ import { format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Send,
   XCircle,
   Loader2,
   Users,
   CheckCircle,
   TrendingUp,
+  FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { adminMarkPresentAction, sendDailySummaryAction } from "@/lib/actions/admin";
+import { adminMarkPresentAction } from "@/lib/actions/admin";
 import { QRScanner } from "@/components/attendance/QRScanner";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials, formatDateISO } from "@/lib/utils";
@@ -49,7 +49,6 @@ export function AttendancePanel({
     useState<AttendanceWithProfile[]>(initialAttendance);
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
-  const [sending, setSending] = useState(false);
   const isToday = date === formatDateISO(new Date());
 
   useEffect(() => {
@@ -121,14 +120,6 @@ export function AttendancePanel({
     });
   };
 
-  const onSendSummary = async () => {
-    setSending(true);
-    const res = await sendDailySummaryAction();
-    setSending(false);
-    if (!res.ok) toast.error(res.error);
-    else toast.success(`Summary sent — ${res.presentCount} present`);
-  };
-
   return (
     <div className="fade-up space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -137,7 +128,7 @@ export function AttendancePanel({
             {format(parseISO(date), "EEEE, MMMM d, yyyy")}
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Review who&apos;s in, mark absences, send WhatsApp summaries.
+            Review who&apos;s in and mark absences for the selected date.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -149,12 +140,12 @@ export function AttendancePanel({
             className="h-10 w-auto rounded-xl border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500"
           />
           <Button
-            onClick={onSendSummary}
-            disabled={sending}
+            type="button"
+            onClick={() => router.push("/admin/reports")}
             className="rounded-xl bg-green-600 font-semibold text-white hover:bg-green-700 active:scale-[0.98]"
           >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Send WhatsApp Summary
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export Report
           </Button>
         </div>
       </div>
@@ -191,32 +182,32 @@ export function AttendancePanel({
           </h3>
           <ul className="max-h-[480px] space-y-1 overflow-auto">
             <AnimatePresence initial={false}>
-              {visiblePresent.length === 0 && (
+            {visiblePresent.length === 0 && (
                 <li className="py-8 text-center text-sm text-slate-600">
-                  No check-ins yet.
-                </li>
-              )}
-              {visiblePresent.map((a) => (
+                No check-ins yet.
+              </li>
+            )}
+            {visiblePresent.map((a) => (
                 <motion.li
-                  key={a.id}
+                key={a.id}
                   layout
                   initial={{ opacity: 0, x: 12 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center justify-between gap-2 rounded-xl px-2 py-2 transition hover:bg-slate-50"
-                >
+              >
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar className="h-9 w-9 border border-slate-100">
-                      {a.profile.avatar_url && (
-                        <AvatarImage src={a.profile.avatar_url} />
-                      )}
+                    {a.profile.avatar_url && (
+                      <AvatarImage src={a.profile.avatar_url} />
+                    )}
                       <AvatarFallback className="bg-blue-600 text-xs font-semibold text-white">
-                        {getInitials(a.profile.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
+                      {getInitials(a.profile.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">
-                        {a.profile.full_name}
-                      </p>
+                      {a.profile.full_name}
+                    </p>
                       <p className="truncate text-xs text-slate-600">
                         {a.profile.team}
                       </p>
@@ -224,12 +215,12 @@ export function AttendancePanel({
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="hidden text-xs text-slate-600 sm:inline">
-                      {format(parseISO(a.checked_in_at), "h:mm a")}
-                    </span>
+                    {format(parseISO(a.checked_in_at), "h:mm a")}
+                  </span>
                     <span className={methodPill(a.method)}>{a.method}</span>
-                  </div>
+                </div>
                 </motion.li>
-              ))}
+            ))}
             </AnimatePresence>
           </ul>
         </div>
@@ -244,14 +235,14 @@ export function AttendancePanel({
           </h3>
           <ul className="max-h-[480px] space-y-1 overflow-auto">
             <AnimatePresence initial={false}>
-              {visibleAbsent.length === 0 && (
+            {visibleAbsent.length === 0 && (
                 <li className="py-8 text-center text-sm text-slate-600">
                   Everyone&apos;s present.
-                </li>
-              )}
-              {visibleAbsent.map((m) => (
+              </li>
+            )}
+            {visibleAbsent.map((m) => (
                 <motion.li
-                  key={m.id}
+                key={m.id}
                   layout
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -260,23 +251,23 @@ export function AttendancePanel({
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar className="h-9 w-9 border border-slate-100">
-                      {m.avatar_url && <AvatarImage src={m.avatar_url} />}
+                    {m.avatar_url && <AvatarImage src={m.avatar_url} />}
                       <AvatarFallback className="bg-blue-600 text-xs font-semibold text-white">
                         {getInitials(m.full_name)}
                       </AvatarFallback>
-                    </Avatar>
+                  </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">
-                        {m.full_name}
-                      </p>
+                      {m.full_name}
+                    </p>
                       <p className="truncate text-xs text-slate-600">{m.team}</p>
                     </div>
-                  </div>
-                  {isToday && (
+                </div>
+                {isToday && (
                     <button
                       type="button"
-                      onClick={() => onMarkPresent(m.id)}
-                      disabled={pending}
+                    onClick={() => onMarkPresent(m.id)}
+                    disabled={pending}
                       className="shrink-0 rounded-lg border-2 border-green-600 px-3 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-50 active:scale-[0.98] disabled:opacity-50"
                     >
                       {pending ? (

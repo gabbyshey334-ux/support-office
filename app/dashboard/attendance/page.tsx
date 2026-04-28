@@ -40,7 +40,7 @@ export default async function AttendancePage() {
             <li>Only admins can scan your QR or otherwise record you as present.</li>
             <li>
               After you are marked present, you will see today&apos;s status on your
-              dashboard and may receive a WhatsApp confirmation.
+              dashboard right away.
             </li>
             <li>
               If you are not showing as present yet, check with an admin at your

@@ -94,7 +94,7 @@ export function MembersTable({ members }: { members: Profile[] }) {
     return members.filter((m) => {
       if (
         query &&
-        !`${m.full_name} ${m.sponsor_name} ${m.upline_name} ${m.phone_whatsapp}`
+        !`${m.full_name} ${m.sponsor_name} ${m.upline_name} ${m.phone}`
           .toLowerCase()
           .includes(query.toLowerCase())
       )
@@ -269,7 +269,7 @@ export function MembersTable({ members }: { members: Profile[] }) {
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-900">{m.full_name}</p>
                         <p className="truncate text-xs text-slate-600">
-                          {m.phone_whatsapp}
+                          {m.phone}
                         </p>
                       </div>
                     </div>

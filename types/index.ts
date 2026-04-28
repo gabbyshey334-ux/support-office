@@ -18,7 +18,7 @@ export interface Profile {
   full_name: string;
   sponsor_name: string;
   upline_name: string;
-  phone_whatsapp: string;
+  phone: string;
   date_of_birth: string;
   status: MemberStatus;
   team: string;

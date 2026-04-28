@@ -34,7 +34,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
   const form = useForm<ProfileUpdateValues>({
     resolver: zodResolver(profileUpdateSchema),
     defaultValues: {
-      phone_whatsapp: profile.phone_whatsapp,
+      phone: profile.phone,
       team: profile.team,
       avatar_url: profile.avatar_url ?? "",
     },
@@ -49,7 +49,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
       const { error } = await supabase
         .from("profiles")
         .update({
-          phone_whatsapp: values.phone_whatsapp,
+          phone: values.phone,
           team: values.team,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
@@ -169,9 +169,9 @@ export function ProfileView({ profile }: { profile: Profile }) {
             <p className="text-xs text-slate-400 mt-1">Manage email via support</p>
           </Field>
 
-          <Field label="Phone (WhatsApp)">
+          <Field label="Phone number">
             <Input
-              {...form.register("phone_whatsapp")}
+              {...form.register("phone")}
               disabled={!editing}
             />
           </Field>

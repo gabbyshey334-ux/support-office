@@ -12,7 +12,7 @@ export async function registerAction(formData: {
   password: string;
   confirm_password: string;
   date_of_birth: string;
-  phone_whatsapp: string;
+  phone: string;
   sponsor_name: string;
   upline_name: string;
   team?: string;
@@ -57,7 +57,7 @@ export async function registerAction(formData: {
     full_name: parsed.data.full_name,
     sponsor_name: parsed.data.sponsor_name,
     upline_name: parsed.data.upline_name,
-    phone_whatsapp: parsed.data.phone_whatsapp,
+    phone: parsed.data.phone,
     date_of_birth: parsed.data.date_of_birth,
     status: parsed.data.status,
     team: parsed.data.team || "Support Office",
@@ -107,7 +107,7 @@ export async function setupAction(values: unknown) {
     full_name: parsed.data.full_name,
     sponsor_name: "Founder",
     upline_name: "Founder",
-    phone_whatsapp: "+2348000000000",
+    phone: "+2348000000000",
     date_of_birth: "1990-01-01",
     status: "manager",
     team: "Support Office",

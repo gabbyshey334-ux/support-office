@@ -61,7 +61,7 @@ export function MemberSlideOver({ open, onOpenChange, member }: Props) {
       email: "",
       password: "",
       date_of_birth: member?.date_of_birth ?? "",
-      phone_whatsapp: member?.phone_whatsapp ?? "",
+      phone: member?.phone ?? "",
       sponsor_name: member?.sponsor_name ?? "",
       upline_name: member?.upline_name ?? "",
       team: member?.team ?? "Support Office",
@@ -77,7 +77,7 @@ export function MemberSlideOver({ open, onOpenChange, member }: Props) {
       if (isEdit && member) {
         res = await updateMemberAction(member.id, {
           full_name: values.full_name,
-          phone_whatsapp: values.phone_whatsapp,
+          phone: values.phone,
           sponsor_name: values.sponsor_name,
           upline_name: values.upline_name,
           team: values.team,
@@ -141,8 +141,8 @@ export function MemberSlideOver({ open, onOpenChange, member }: Props) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Phone" error={errors.phone_whatsapp?.message}>
-              <Input {...register("phone_whatsapp")} className={inputClass} />
+            <Field label="Phone" error={errors.phone?.message}>
+              <Input {...register("phone")} className={inputClass} />
             </Field>
           </div>
 

@@ -43,7 +43,9 @@ export function ApprovalsTable({ pending }: { pending: Profile[] }) {
       setBusy(null);
       if (!res.ok) toast.error(res.error);
       else {
-        toast.success(`${m.full_name} approved — WhatsApp sent`);
+        toast.success(
+          `${m.full_name} has been approved and can now log in.`
+        );
         router.refresh();
       }
     });
@@ -56,7 +58,7 @@ export function ApprovalsTable({ pending }: { pending: Profile[] }) {
       setBusy(null);
       if (!res.ok) toast.error(res.error);
       else {
-        toast.success(`${m.full_name} rejected`);
+        toast.error(`${m.full_name}'s registration has been rejected.`);
         router.refresh();
       }
     });
@@ -117,7 +119,7 @@ export function ApprovalsTable({ pending }: { pending: Profile[] }) {
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900">{m.full_name}</p>
                     <p className="text-xs text-slate-600">{m.team}</p>
-                    <p className="mt-1 text-xs text-slate-600">{m.phone_whatsapp}</p>
+                    <p className="mt-1 text-xs text-slate-600">{m.phone}</p>
                   </div>
                 </div>
               </TableCell>

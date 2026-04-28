@@ -7,7 +7,7 @@ import { SupportOfficeWordmark } from "@/components/ui/SupportOfficeWordmark";
 const trustLines = [
   { icon: Layers, text: "Structured for FHG & Neolife teams" },
   { icon: Sparkles, text: "Attendance, streaks, and clarity in one place" },
-  { icon: Check, text: "WhatsApp confirmations when attendance is recorded" },
+  { icon: Check, text: "Real-time Updates" },
 ];
 
 export function Hero() {
@@ -113,7 +113,7 @@ export function Hero() {
                 {[
                   "Check-in status for today",
                   "Streak and monthly rhythm",
-                  "Recent activity & confirmations",
+                  "Recent activity on your dashboard",
                 ].map((line) => (
                   <li
                     key={line}
