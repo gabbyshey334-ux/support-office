@@ -4,6 +4,11 @@ import { updateSession } from "@/lib/supabase/middleware";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Generated icons — no auth / session work needed (also avoids touching ImageResponse)
+  if (pathname === "/icon" || pathname === "/apple-icon") {
+    return NextResponse.next();
+  }
+
   // Skip Next internal & static asset paths
   if (
     pathname.startsWith("/_next") ||

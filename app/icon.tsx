@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+/** Node avoids Edge font-fetch issues; still fast for a single PNG. */
+export const runtime = "nodejs";
 
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";

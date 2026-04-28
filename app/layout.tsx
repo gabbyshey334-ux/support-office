@@ -42,6 +42,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://support-office.app"
   ),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon", type: "image/png", sizes: "512x512" },
+    ],
+  },
   openGraph: {
     title: "Support Office — FHG & Neolife Attendance System",
     description:
