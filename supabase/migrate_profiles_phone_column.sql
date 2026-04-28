@@ -13,3 +13,4 @@ BEGIN
     ALTER TABLE public.profiles RENAME COLUMN phone_whatsapp TO phone;
   END IF;
 END $$;
+
